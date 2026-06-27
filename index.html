@@ -238,7 +238,7 @@ tr:hover td{background:#fafafa}
         <button class="bank-year-btn" onclick="changeBankYear(1)">▶</button>
         <div id="bank-month-tabs" class="bank-month-tabs"></div>
         <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
-          <button class="btn btn-secondary btn-sm" onclick="document.getElementById('bank-upload-input').click()">⬆ Upload Excel</button>
+          <label for="bank-upload-input" class="btn btn-secondary btn-sm" style="cursor:pointer;margin:0">⬆ Upload Excel</label>
           <input type="file" id="bank-upload-input" accept=".xlsx,.xls" style="display:none" onchange="handleBankUpload(this)">
           <button class="btn btn-secondary btn-sm" onclick="exportBankCSV()">⬇ CSV</button>
         </div>
@@ -1071,20 +1071,34 @@ function renderBank() {
 
   renderBankMonthTabs();
 
-  const allSorted = [...cache.bank].sort((a,b)=>(a.ngay||'').localeCompare(b.ngay||''));
+  const coso = allCosos.find(c=>c.id===selectedCosoId);
+  const initSoDu = coso?.soDuInitial || 0;
+
+  // Sort all transactions by date+id for stable ordering
+  const allSorted = [...cache.bank].sort((a,b)=>(a.ngay||'').localeCompare(b.ngay||'')||(a.id||'').localeCompare(b.id||''));
+
+  // Calculate running balance for ALL transactions from initSoDu
+  let running = initSoDu;
+  const soDuMap = {};
+  allSorted.forEach(b => {
+    running += (b.thu||0) - (b.chi||0);
+    soDuMap[b.id] = running;
+  });
+
   const monthBk = allSorted.filter(b=>b.thang===thang);
   const monthThu = monthBk.reduce((s,b)=>s+(b.thu||0),0);
   const monthChi = monthBk.reduce((s,b)=>s+(b.chi||0),0);
-  const lastTx = allSorted[allSorted.length-1];
-  const soDu = lastTx?.soDu ?? 0;
 
   const [yr, mn] = thang.split('-');
-  const prevThang = (()=>{ const d=new Date(parseInt(yr),parseInt(mn)-2,1); return d.toISOString().slice(0,7); })();
-  const prevTxArr = allSorted.filter(b=>b.thang<=prevThang);
-  const coso = allCosos.find(c=>c.id===selectedCosoId);
-  const soDuDauKy = prevTxArr.length ? prevTxArr[prevTxArr.length-1].soDu : (coso?.soDuInitial||0);
+  // Opening balance = initSoDu + all transactions BEFORE this month
+  const beforeMonth = allSorted.filter(b=>b.thang<thang);
+  const soDuDauKy = beforeMonth.length ? soDuMap[beforeMonth[beforeMonth.length-1].id] : initSoDu;
 
-  document.getElementById('bk-sodu').textContent = fmt(soDu);
+  // Closing balance = last transaction's running balance (latest month with data)
+  const lastTx = allSorted[allSorted.length-1];
+  const soDuHienTai = lastTx ? soDuMap[lastTx.id] : initSoDu;
+
+  document.getElementById('bk-sodu').textContent = fmt(soDuHienTai);
   document.getElementById('bk-sodu-sub').textContent = lastTx ? 'đến ' + lastTx.ngay : 'Chưa có dữ liệu';
   document.getElementById('bk-thu').textContent = fmt(monthThu);
   document.getElementById('bk-thu-sub').textContent = `${monthBk.filter(b=>b.thu>0).length} giao dịch`;
@@ -1121,7 +1135,7 @@ function renderBank() {
       <td><span class="badge ${catBadge[b.chiTiet]||'bgr'}">${b.chiTiet||''}</span></td>
       <td class="bank-thu">${b.thu?fmt(b.thu):''}</td>
       <td class="bank-chi">${b.chi?fmt(b.chi):''}</td>
-      <td style="font-size:11px;color:#6b7280">${fmt(b.soDu)}</td>
+      <td style="font-size:11px;color:#6b7280">${fmt(soDuMap[b.id]??0)}</td>
       <td>${canEdit?`<button class="btn btn-danger btn-sm" onclick="deleteBankEntry('${b.id}')">✕</button>`:''}</td>
     </tr>`;
   });
@@ -1157,65 +1171,136 @@ async function deleteBankEntry(id) {
 
 // ===== UPLOAD EXCEL =====
 function handleBankUpload(input) {
+  if (!selectedCosoId) { toast('Vui lòng chọn cơ sở trước khi upload!', 'error'); return; }
   const file = input.files[0]; if (!file) return;
+
+  // Firestore batch helper — splits into chunks of 400 to stay under 500 limit
+  async function commitInBatches(ops) {
+    const CHUNK = 400;
+    for (let i = 0; i < ops.length; i += CHUNK) {
+      const b = db.batch();
+      ops.slice(i, i+CHUNK).forEach(({ref, data}) => b.set(ref, data));
+      await b.commit();
+    }
+  }
+
+  // Parse date from Excel serial number or string
+  function parseNgay(val) {
+    if (!val && val !== 0) return null;
+    if (val instanceof Date) return val.toISOString().split('T')[0];
+    if (typeof val === 'number') {
+      // Excel date serial — XLSX cellDates:false path
+      const jsDate = new Date(Math.round((val - 25569) * 86400 * 1000));
+      if (!isNaN(jsDate)) return jsDate.toISOString().split('T')[0];
+    }
+    if (typeof val === 'string') {
+      const s = val.trim();
+      // dd/mm/yyyy
+      const m = s.match(/^(\d{2})[\/-](\d{2})[\/-](\d{4})$/);
+      if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+      // yyyy-mm-dd
+      if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
+      return s;
+    }
+    return null;
+  }
+
   const reader = new FileReader();
   reader.onload = async (e) => {
     try {
+      if (typeof XLSX === 'undefined') { toast('Thư viện Excel chưa tải xong, thử lại sau vài giây', 'error'); return; }
+
       const data = new Uint8Array(e.target.result);
       const wb = XLSX.read(data, {type:'array', cellDates:true});
-      // Try "Vietcombank" sheet first, fallback to first sheet
-      const sheetName = wb.SheetNames.includes('Vietcombank') ? 'Vietcombank' : wb.SheetNames[0];
+
+      const sheetName = wb.SheetNames.find(n => /vietcombank/i.test(n)) || wb.SheetNames[0];
       const ws = wb.Sheets[sheetName];
       const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:null});
 
-      // Header on row index 2 (row 3): Ngay, Thang, Phong, Noi dung, Chi tiet, THU, CHI, SO DU
-      // Data from row index 3 onward
-      let imported = 0, skipped = 0;
-      const batch = db.batch();
-      const coso = allCosos.find(c=>c.id===selectedCosoId);
-      const initSoDu = coso?.soDuInitial || 0;
+      console.log('[BankUpload] Sheet:', sheetName, '| Total rows:', rows.length);
+      console.log('[BankUpload] Row 0:', rows[0]);
+      console.log('[BankUpload] Row 1:', rows[1]);
+      console.log('[BankUpload] Row 2:', rows[2]);
+      console.log('[BankUpload] Row 3:', rows[3]);
 
-      for (let i=3; i<rows.length; i++) {
-        const row = rows[i];
-        if (!row || !row[0]) continue;  // no date = skip
-        let ngay = row[0];
-        if (ngay instanceof Date) {
-          ngay = ngay.toISOString().split('T')[0];
-        } else if (typeof ngay === 'string') {
-          ngay = ngay.trim();
-        } else { skipped++; continue; }
-
-        const thang = ngay.slice(0,7);
-        const phong = row[2] ? String(row[2]).trim() : '';
-        const noiDung = row[3] ? String(row[3]).trim() : '';
-        const chiTiet = row[4] ? String(row[4]).trim() : '';
-        // Normalize chiTiet
-        const chiTietNorm = chiTiet.replace('Lãi ','Lãi NH').replace('Chuyển CĐT','Chuyển CĐT');
-        const thu = Number(row[5])||0;
-        const chi = Number(row[6])||0;
-        const soDu = Number(row[7])||0;
-
-        if (!chiTietNorm && !thu && !chi) { skipped++; continue; }
-
-        const ref = db.collection('bank').doc();
-        batch.set(ref, {
-          cosoId: selectedCosoId,
-          ngay, thang, phong, noiDung,
-          chiTiet: chiTietNorm || 'Khác',
-          thu, chi, soDu,
-          importedFrom: 'upload',
-          createdBy: currentUser.uid,
-          createdAt: FieldValue.serverTimestamp()
-        });
-        imported++;
+      // Auto-detect header row: find row where first cell looks like a date keyword or col count >= 5
+      let dataStart = 1;
+      for (let i = 0; i < Math.min(10, rows.length); i++) {
+        const r = rows[i];
+        if (!r) continue;
+        const first = r[0] ? String(r[0]).toLowerCase() : '';
+        if (first.includes('ngày') || first.includes('ngay') || first.includes('date')) {
+          dataStart = i + 1; // header found, data starts next row
+          break;
+        }
+        // If first cell looks like a date value, data starts here
+        const ngay = parseNgay(r[0]);
+        if (ngay && /^\d{4}-\d{2}-\d{2}$/.test(ngay)) {
+          dataStart = i;
+          break;
+        }
       }
 
-      await batch.commit();
-      toast(`Đã import ${imported} giao dịch${skipped?' (bỏ qua '+skipped+')':''}`, 'success');
+      console.log('[BankUpload] Data starts at row index:', dataStart);
+
+      const ops = [];
+      let skipped = 0;
+
+      for (let i = dataStart; i < rows.length; i++) {
+        const row = rows[i];
+        if (!row) { skipped++; continue; }
+
+        const ngay = parseNgay(row[0]);
+        if (!ngay || !/^\d{4}-\d{2}-\d{2}$/.test(ngay)) { skipped++; continue; }
+
+        const thang = ngay.slice(0,7);
+        const phong    = row[2] ? String(row[2]).trim() : '';
+        const noiDung  = row[3] ? String(row[3]).trim() : '';
+        const chiTiet  = row[4] ? String(row[4]).trim() : '';
+        const thu  = parseFloat(String(row[5]||'').replace(/[^0-9.-]/g,'')) || 0;
+        const chi  = parseFloat(String(row[6]||'').replace(/[^0-9.-]/g,'')) || 0;
+        const soDu = parseFloat(String(row[7]||'').replace(/[^0-9.-]/g,'')) || 0;
+
+        // Normalize chiTiet
+        const chiTietFinal = chiTiet
+          .replace(/Lãi\s+(?!NH)/,'Lãi NH')
+          || (thu ? 'Khác Thu' : chi ? 'Khác Chi' : 'Khác');
+
+        if (!thu && !chi && !chiTiet) { skipped++; continue; }
+
+        ops.push({
+          ref: db.collection('bank').doc(),
+          data: {
+            cosoId: selectedCosoId, ngay, thang, phong, noiDung,
+            chiTiet: chiTietFinal,
+            thu, chi, soDu,
+            importedFrom: 'upload',
+            createdBy: currentUser.uid,
+            createdAt: FieldValue.serverTimestamp()
+          }
+        });
+      }
+
+      console.log('[BankUpload] ops to write:', ops.length, '| skipped:', skipped);
+
+      if (ops.length === 0) {
+        toast('Không tìm thấy dữ liệu hợp lệ trong file. Kiểm tra lại format Excel.', 'error');
+        input.value = ''; return;
+      }
+
+      toast(`Đang lưu ${ops.length} giao dịch...`, 'info');
+      await commitInBatches(ops);
+      toast(`✅ Đã import ${ops.length} giao dịch${skipped?' (bỏ qua '+skipped+')':''}`, 'success');
       input.value = '';
+      switchBankMonth(bankSelectedMonth); // refresh view
     } catch(err) {
-      toast('Lỗi đọc file: ' + err.message, 'error');
-      console.error(err);
+      console.error('[BankUpload] Error:', err);
+      if (err.code === 'permission-denied') {
+        toast('Lỗi quyền truy cập Firestore! Cần thêm rule cho collection bank.', 'error');
+      } else {
+        toast('Lỗi: ' + err.message, 'error');
+      }
+      input.value = '';
     }
   };
   reader.readAsArrayBuffer(file);
