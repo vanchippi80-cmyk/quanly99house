@@ -1135,12 +1135,12 @@ function renderBank() {
   const beforeMonth = allSorted.filter(b=>b.thang<thang);
   const soDuDauKy = beforeMonth.length ? soDuMap[beforeMonth[beforeMonth.length-1].id] : initSoDu;
 
-  // Closing balance = last transaction's running balance (latest month with data)
-  const lastTx = allSorted[allSorted.length-1];
-  const soDuHienTai = lastTx ? soDuMap[lastTx.id] : initSoDu;
+  // Closing balance = last transaction in selected month
+  const lastTxMonth = monthBk[monthBk.length-1];
+  const soDuCuoiKy = lastTxMonth ? soDuMap[lastTxMonth.id] : soDuDauKy;
 
-  document.getElementById('bk-sodu').textContent = fmt(soDuHienTai);
-  document.getElementById('bk-sodu-sub').textContent = lastTx ? 'đến ' + fmtNgay(lastTx.ngay) : 'Chưa có dữ liệu';
+  document.getElementById('bk-sodu').textContent = fmt(soDuCuoiKy);
+  document.getElementById('bk-sodu-sub').textContent = lastTxMonth ? 'đến ' + fmtNgay(lastTxMonth.ngay) : `Tháng ${mn}/${yr}`;
   document.getElementById('bk-thu').textContent = fmt(monthThu);
   document.getElementById('bk-thu-sub').textContent = `${monthBk.filter(b=>b.thu>0).length} giao dịch`;
   document.getElementById('bk-chi').textContent = fmt(monthChi);
