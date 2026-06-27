@@ -1618,20 +1618,13 @@ function renderKQKD() {
     return prev.length ? soDuMap[prev[prev.length-1].id] : initSoDu;
   }
 
-  // Row definitions: fixed order first, then any extra thu categories found in actual data
+  // Doanh thu rows: only Phí thuê + Phí dịch vụ + Lãi NH (excludes Tiền cọc and extras)
   const THU_FIXED = [
     {key:'Tiền thuê',   label:'Phí thuê'},
     {key:'Phí dịch vụ', label:'Phí dịch vụ'},
-    {key:'Tiền cọc',    label:'Phí cọc'},
     {key:'Lãi NH',      label:'Lãi bank'},
   ];
-  const thuFixedKeys = THU_FIXED.map(r=>r.key);
-  // Auto-detect any extra thu categories in the actual bank data (not in fixed list, not CĐT)
-  const thuExtra = [...new Set(
-    cache.bank.filter(b=>(b.thu||0)>0&&b.chiTiet&&(b.chiTiet||'').trim()!=='Chuyển CĐT')
-    .map(b=>(b.chiTiet||'').trim())
-  )].filter(k=>!thuFixedKeys.includes(k));
-  const THU_ROWS = [...THU_FIXED, ...thuExtra.map(k=>({key:k,label:k}))];
+  const THU_ROWS = THU_FIXED;
 
   // Chi rows: fixed template order + any extra categories found in data
   const CHI_FIXED = ['Dọn dẹp','Hoa hồng','Đồ dùng','Điện thoại','Điện','Nước','Internet','Sửa chữa','Bể bơi','Thuế','Rác','Khác'];
@@ -1649,9 +1642,10 @@ function renderKQKD() {
     const bk = allSorted.filter(b=>b.thang===thangKey);
 
     const thu = {};
-    // Only count positive thu entries per category
     THU_ROWS.forEach(r=>{ thu[r.key] = bk.reduce((s,b)=>s+((b.chiTiet||'').trim()===r.key&&(b.thu||0)>0?(b.thu):0),0); });
-    // totalThu = sum of ALL positive thu (catches any categories not in THU_ROWS)
+    // doanhThu = only the 3 fixed categories (no Tiền cọc, no extras)
+    const doanhThu = THU_ROWS.reduce((s,r)=>s+(thu[r.key]||0),0);
+    // totalThu = ALL positive thu (Tiền cọc + everything)
     const totalThu = bk.reduce((s,b)=>s+((b.thu||0)>0?b.thu:0),0);
 
     const chi = {};
@@ -1663,14 +1657,14 @@ function renderKQKD() {
     const lastBk = bk[bk.length-1];
     const soDuCuoi = lastBk ? (soDuMap[lastBk.id]??soDuDau) : soDuDau;
 
-    return {m, thangKey, thu, totalThu, chi, totalChi, cdt, soDuDau, soDuCuoi, loiNhuan: totalThu-totalChi};
+    return {m, thangKey, thu, totalThu, doanhThu, chi, totalChi, cdt, soDuDau, soDuCuoi, loiNhuan: doanhThu-totalChi};
   });
 
   // Totals helper
   const sum = fn => mData.reduce((s,d)=>s+fn(d),0);
 
   // Summary cards
-  const totalDT = sum(d=>d.totalThu);
+  const totalDT = sum(d=>d.doanhThu);
   const totalCP = sum(d=>d.totalChi);
   const totalLN = sum(d=>d.loiNhuan);
   const lnColor = totalLN >= 0 ? '#166534' : '#991b1b';
@@ -1705,11 +1699,18 @@ function renderKQKD() {
     <td style="text-align:right;padding:5px 7px;font-size:11px;color:#9ca3af;border-bottom:1px solid #e5e7eb">—</td>
   </tr>`;
 
+  // ─── Tổng thu ───
+  t += `<tr style="background:#f0fdf4">
+    ${lblB('Tổng thu','#f0fdf4','color:#15803d')}
+    ${mData.map(d=>tdB(f0(d.totalThu),'color:#15803d')).join('')}
+    ${tdB(f0(sum(d=>d.totalThu)),'color:#15803d')}
+  </tr>`;
+
   // ─── Doanh thu ───
   t += `<tr style="background:#dcfce7">
     ${lblB('Doanh thu','#dcfce7','color:#166534')}
-    ${mData.map(d=>tdB(f0(d.totalThu),'color:#166534')).join('')}
-    ${tdB(f0(sum(d=>d.totalThu)),'color:#166534')}
+    ${mData.map(d=>tdB(f0(d.doanhThu),'color:#166534')).join('')}
+    ${tdB(f0(sum(d=>d.doanhThu)),'color:#166534')}
   </tr>`;
   THU_ROWS.forEach(r=>{
     const vals = mData.map(d=>d.thu[r.key]||0);
