@@ -1192,7 +1192,6 @@ function renderBank() {
     <td></td>
   </tr>${filterSummaryRow}`;
 
-  rebuildFilterDropdown();
   // Store data for inline editing access by ID
   window._bankDataMap = window._bankDataMap || {};
   display.forEach(b => { window._bankDataMap[b.id] = b; });
@@ -1248,6 +1247,8 @@ function renderBank() {
   }
 
   document.getElementById('bank-table').innerHTML = html;
+
+  rebuildFilterDropdown();
 
   // Update clear button
   const _clearBtn = document.getElementById('btn-clear-filter');
