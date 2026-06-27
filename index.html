@@ -1149,7 +1149,7 @@ function renderBank() {
   document.getElementById('bank-header').textContent = `Bank – Tháng ${mn}/${yr}`;
 
   let display = monthBk;
-  if (filterCat) display = display.filter(b=>b.chiTiet===filterCat);
+  if (filterCat) display = display.filter(b=>(b.chiTiet||'').trim()===filterCat);
 
   const catBadge = {
     'Tiền thuê':'bg','Phí dịch vụ':'bb','Tiền cọc':'bpk','Lãi NH':'bte',
@@ -1167,7 +1167,7 @@ function renderBank() {
   const summaryDiv = document.getElementById('bank-filter-summary');
   if (summaryDiv) {
     if (filterCat) {
-      summaryDiv.innerHTML = `🔍 <b>${filterCat}</b> &nbsp;·&nbsp; ${display.length}/${monthBk.length} giao dịch`
+      summaryDiv.innerHTML = `🔍 <b>${filterCat.trim()}</b> &nbsp;·&nbsp; ${display.length}/${monthBk.length} giao dịch`
         + (filtThuSummary ? `&nbsp;&nbsp;|&nbsp;&nbsp;Thu: <b style="color:#16a34a">${fmt(filtThuSummary)}</b>` : '')
         + (filtChiSummary ? `&nbsp;&nbsp;|&nbsp;&nbsp;Chi: <b style="color:#dc2626">${fmt(filtChiSummary)}</b>` : '')
         + `&nbsp;&nbsp;|&nbsp;&nbsp;Net: <b>${fmt(filtThuSummary-filtChiSummary)}</b>`;
@@ -1304,10 +1304,17 @@ function rebuildFilterDropdown() {
   if (!sel) return;
   const cur = sel.value;
   sel.innerHTML = '<option value="">Lọc chi tiết</option>';
-  getAllCatsForSelect().forEach(c => {
+  // Merge configured cats + any actual chiTiet values in current month's bank data
+  const thang = getBankMonth();
+  const configuredCats = getAllCatsForSelect();
+  const dataCats = [...new Set(
+    cache.bank.filter(b=>b.thang===thang&&b.chiTiet).map(b=>(b.chiTiet||'').trim())
+  )];
+  const allCats = [...new Set([...configuredCats.map(c=>c.trim()), ...dataCats])];
+  allCats.forEach(c => {
     const o = document.createElement('option');
-    o.value = o.textContent = c;
-    if (c === cur) o.selected = true;
+    o.value = c; o.textContent = c;
+    if (c === cur.trim()) o.selected = true;
     sel.appendChild(o);
   });
 }
@@ -1615,7 +1622,10 @@ function renderKQKD() {
   ];
   // Chi rows: fixed template order + any extra categories found in data
   const CHI_FIXED = ['Dọn dẹp','Hoa hồng','Đồ dùng','Điện thoại','Điện','Nước','Internet','Sửa chữa','Bể bơi','Thuế','Rác','Khác'];
-  const chiExtra = [...new Set(cache.bank.filter(b=>(b.chi||0)>0&&b.chiTiet&&b.chiTiet!=='Chuyển CĐT').map(b=>b.chiTiet))].filter(c=>!CHI_FIXED.includes(c));
+  const chiExtra = [...new Set(
+    cache.bank.filter(b=>(b.chi||0)>0&&b.chiTiet&&(b.chiTiet||'').trim()!=='Chuyển CĐT')
+    .map(b=>(b.chiTiet||'').trim())
+  )].filter(c=>!CHI_FIXED.includes(c));
   const CHI_ROWS = [...CHI_FIXED, ...chiExtra];
 
   // Calculate data for each month
@@ -1626,14 +1636,15 @@ function renderKQKD() {
     const bk = allSorted.filter(b=>b.thang===thangKey);
 
     const thu = {};
-    THU_ROWS.forEach(r=>{ thu[r.key] = bk.reduce((s,b)=>s+(b.chiTiet===r.key?(b.thu||0):0),0); });
+    // Only count positive thu entries (exclude negative returns like "Trả cọc" with thu < 0)
+    THU_ROWS.forEach(r=>{ thu[r.key] = bk.reduce((s,b)=>s+((b.chiTiet||'').trim()===r.key&&(b.thu||0)>0?(b.thu):0),0); });
     const totalThu = Object.values(thu).reduce((s,v)=>s+v,0);
 
     const chi = {};
-    CHI_ROWS.forEach(k=>{ chi[k] = bk.reduce((s,b)=>s+(b.chiTiet===k?(b.chi||0):0),0); });
+    CHI_ROWS.forEach(k=>{ chi[k] = bk.reduce((s,b)=>s+((b.chiTiet||'').trim()===k?(b.chi||0):0),0); });
     const totalChi = Object.values(chi).reduce((s,v)=>s+v,0);
 
-    const cdt = bk.reduce((s,b)=>s+(b.chiTiet==='Chuyển CĐT'?(b.chi||0):0),0);
+    const cdt = bk.reduce((s,b)=>s+((b.chiTiet||'').trim()==='Chuyển CĐT'?(b.chi||0):0),0);
     const soDuDau = soDuBefore(`${yr}-${mn2}-01`);
     const lastBk = bk[bk.length-1];
     const soDuCuoi = lastBk ? (soDuMap[lastBk.id]??soDuDau) : soDuDau;
