@@ -270,6 +270,7 @@ tr:hover td{background:#fafafa}
             <button class="btn btn-success" id="btn-bank-save" onclick="saveBankRows()" style="display:none">💾 Lưu</button>
           </div>
         </div>
+        <div id="bank-filter-summary" style="display:none;margin:0 0 4px 0;padding:7px 14px;background:#dcfce7;border:1px solid #86efac;border-radius:8px;font-size:12px;color:#166534;display:none;align-items:center;gap:16px"></div>
         <div style="overflow-x:auto">
         <table style="min-width:680px">
           <thead><tr>
@@ -1175,22 +1176,27 @@ function renderBank() {
   let stt = 1;
   const filtThuSummary = display.reduce((s,b)=>s+(b.thu||0),0);
   const filtChiSummary = display.reduce((s,b)=>s+(b.chi||0),0);
-  const filterSummaryRow = filterCat ? `<tr style="background:#ecfdf5;border-bottom:1px solid #bbf7d0">
-    <td colspan="3" style="padding:6px 12px;font-size:11px;color:#166534">
-      🔍 <b>${filterCat}</b> &nbsp;·&nbsp; ${display.length}/${monthBk.length} giao dịch
-    </td>
-    <td></td>
-    <td style="font-size:11px;color:#166534;font-weight:700;text-align:right">${filtThuSummary?fmt(filtThuSummary):''}</td>
-    <td style="font-size:11px;color:#166534;font-weight:700;text-align:right">${filtChiSummary?fmt(filtChiSummary):''}</td>
-    <td style="font-size:11px;color:#166534;font-weight:700;text-align:right">${fmt(filtThuSummary-filtChiSummary)}</td>
-    <td></td>
-  </tr>` : '';
+
+  // Update summary banner (div above table)
+  const summaryDiv = document.getElementById('bank-filter-summary');
+  if (summaryDiv) {
+    if (filterCat) {
+      summaryDiv.innerHTML = `🔍 <b>${filterCat}</b> &nbsp;·&nbsp; ${display.length}/${monthBk.length} giao dịch`
+        + (filtThuSummary ? `&nbsp;&nbsp;|&nbsp;&nbsp;Thu: <b style="color:#16a34a">${fmt(filtThuSummary)}</b>` : '')
+        + (filtChiSummary ? `&nbsp;&nbsp;|&nbsp;&nbsp;Chi: <b style="color:#dc2626">${fmt(filtChiSummary)}</b>` : '')
+        + `&nbsp;&nbsp;|&nbsp;&nbsp;Net: <b>${fmt(filtThuSummary-filtChiSummary)}</b>`;
+      summaryDiv.style.display = 'flex';
+    } else {
+      summaryDiv.style.display = 'none';
+    }
+  }
+
   let html = `<tr style="background:#f0fdf4">
     <td colspan="5" style="font-weight:700;font-size:12px;color:#374151">Số dư đầu kỳ</td>
     <td></td>
     <td style="font-weight:800;color:#111827;font-size:13px;text-align:right">${fmt(soDuDauKy)}</td>
     <td></td>
-  </tr>${filterSummaryRow}`;
+  </tr>`;
 
   // Store data for inline editing access by ID
   window._bankDataMap = window._bankDataMap || {};
