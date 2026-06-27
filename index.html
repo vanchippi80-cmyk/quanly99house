@@ -1005,6 +1005,7 @@ function renderAll() {
 
 // ===== HELPERS =====
 function fmt(n) { return (n||0).toLocaleString('vi-VN')+'đ'; }
+function fmtNgay(s) { if (!s) return ''; const [y,m,d] = s.split('-'); return `${d}-${m}-${y}`; }
 function fmtNum(n) { return (n||0).toLocaleString('vi-VN'); }
 function daysUntil(dateStr) { if (!dateStr) return 9999; return Math.round((new Date(dateStr)-new Date())/(1000*60*60*24)); }
 function isBankThu(cat) { return CAT_THU.includes(cat); }
@@ -1139,7 +1140,7 @@ function renderBank() {
   const soDuHienTai = lastTx ? soDuMap[lastTx.id] : initSoDu;
 
   document.getElementById('bk-sodu').textContent = fmt(soDuHienTai);
-  document.getElementById('bk-sodu-sub').textContent = lastTx ? 'đến ' + lastTx.ngay : 'Chưa có dữ liệu';
+  document.getElementById('bk-sodu-sub').textContent = lastTx ? 'đến ' + fmtNgay(lastTx.ngay) : 'Chưa có dữ liệu';
   document.getElementById('bk-thu').textContent = fmt(monthThu);
   document.getElementById('bk-thu-sub').textContent = `${monthBk.filter(b=>b.thu>0).length} giao dịch`;
   document.getElementById('bk-chi').textContent = fmt(monthChi);
@@ -1192,7 +1193,7 @@ function renderBank() {
     const badge = `<span class="badge ${catBadge[b.chiTiet]||'bgr'}">${b.chiTiet||''}</span>`;
     html += `<tr>
       <td style="color:#6b7280;font-size:11px;text-align:center">${stt++}</td>
-      <td class="cell-edit" data-id="${b.id}" data-field="ngay" data-type="date"><span>${b.ngay||''}</span></td>
+      <td class="cell-edit" data-id="${b.id}" data-field="ngay" data-type="date"><span>${fmtNgay(b.ngay)}</span></td>
       <td class="cell-edit" data-id="${b.id}" data-field="noiDung" data-type="text"><span>${(b.noiDung||'').replace(/</g,'&lt;')}</span></td>
       <td class="cell-edit" data-id="${b.id}" data-field="chiTiet" data-type="select"><span class="badge ${catBadge[b.chiTiet]||'bgr'}">${b.chiTiet||''}</span></td>
       <td class="bank-thu cell-edit" data-id="${b.id}" data-field="thu" data-type="number"><span>${b.thu?fmt(b.thu):''}</span></td>
