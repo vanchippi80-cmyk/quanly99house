@@ -319,6 +319,7 @@ tr:hover td{background:#fafafa}
         </div>
         <button class="btn btn-secondary" onclick="window.print()">🖨 In báo cáo</button>
       </div>
+      <div id="kqkd-cards" class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px"></div>
       <div id="kqkd-table-wrap" style="overflow-x:auto"></div>
     </div>
 
@@ -1667,6 +1668,16 @@ function renderKQKD() {
 
   // Totals helper
   const sum = fn => mData.reduce((s,d)=>s+fn(d),0);
+
+  // Summary cards
+  const totalDT = sum(d=>d.totalThu);
+  const totalCP = sum(d=>d.totalChi);
+  const totalLN = sum(d=>d.loiNhuan);
+  const lnColor = totalLN >= 0 ? '#166534' : '#991b1b';
+  document.getElementById('kqkd-cards').innerHTML = `
+    <div class="stat-card green"><div class="lbl">Tổng doanh thu</div><div class="val" style="color:#166534">${fmt(totalDT)}</div><div class="sub">Năm ${yr}</div></div>
+    <div class="stat-card red"><div class="lbl">Tổng chi phí</div><div class="val" style="color:#991b1b">${fmt(totalCP)}</div><div class="sub">Năm ${yr}</div></div>
+    <div class="stat-card blue"><div class="lbl">Tổng lợi nhuận</div><div class="val" style="color:${lnColor}">${fmt(totalLN)}</div><div class="sub">Năm ${yr}</div></div>`;
 
   // Cell formatter
   const f0 = v => v ? fmt(v) : '';
