@@ -1205,6 +1205,23 @@ function renderBank() {
     </tr>`;
   });
 
+  // Total row for filtered results
+  if (display.length > 0) {
+    const filtThu = display.reduce((s,b)=>s+(b.thu||0),0);
+    const filtChi = display.reduce((s,b)=>s+(b.chi||0),0);
+    const isFiltered = filterCat !== '';
+    html += `<tr style="background:#f9fafb;border-top:2px solid #e5e7eb">
+      <td colspan="3" style="font-weight:700;font-size:12px;color:#374151;padding:8px 12px">
+        ${isFiltered ? 'Tổng lọc: <span style="color:#16a34a">'+display.length+' giao dịch</span>' : 'Tổng tháng'}
+      </td>
+      <td></td>
+      <td style="font-weight:800;font-size:13px;text-align:right;color:#111827">${filtThu?fmt(filtThu):''}</td>
+      <td style="font-weight:800;font-size:13px;text-align:right;color:#111827">${filtChi?fmt(filtChi):''}</td>
+      <td style="font-weight:800;font-size:13px;text-align:right;color:#111827">${fmt(filtThu-filtChi)}</td>
+      <td></td>
+    </tr>`;
+  }
+
   if (!display.length && !bankEditBuffer.length) {
     html = `<tr><td colspan="8"><div class="empty"><div class="icon">🏦</div><p>Không có giao dịch tháng ${mn}/${yr}<br><small style="color:#9ca3af">Nhấn "+ Thêm giao dịch" hoặc Upload Excel</small></p></div></td></tr>`;
   }
