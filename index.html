@@ -1217,7 +1217,7 @@ function renderBank() {
   });
 }
 
-async async function deleteBankEntry(id) {
+async function deleteBankEntry(id) {
   if (!confirm('Xoá giao dịch này?')) return;
   await db.collection('bank').doc(id).delete();
   toast('Đã xoá','success');
