@@ -310,27 +310,21 @@ tr:hover td{background:#fafafa}
 
     <!-- KQKD TAB -->
     <div class="tab-pane" id="tab-kqkd">
-      <div style="display:flex;gap:8px;margin-bottom:16px;align-items:center">
-        <input type="month" class="tab-month-input" onchange="updateGlobalMonth(this.value)" style="padding:5px 8px;border-radius:7px;border:1.5px solid #e5e7eb;font-size:12px;cursor:pointer">
+      <div style="display:flex;gap:10px;margin-bottom:12px;align-items:center;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:6px">
+          <label style="font-size:12px;color:#374151;font-weight:600">Năm:</label>
+          <input type="number" id="kqkd-year" min="2020" max="2035"
+            style="padding:5px 10px;border-radius:7px;border:1.5px solid #e5e7eb;font-size:13px;width:90px;font-weight:600"
+            onchange="renderKQKD()">
+        </div>
         <button class="btn btn-secondary" onclick="window.print()">🖨 In báo cáo</button>
       </div>
-      <div class="summary-box">
-        <h3 id="rpt-month">Kết quả kinh doanh tháng</h3>
-        <div class="big" id="rpt-loinhuan">0đ</div>
-        <div class="sub2" id="rpt-lapday"></div>
-      </div>
-      <div class="report-grid">
-        <div class="pl-box">
-          <div class="pl-head">📊 KẾT QUẢ KINH DOANH</div>
-          <div id="rpt-pl"></div>
+      <div id="kqkd-table-wrap" style="overflow-x:auto"></div>
+      <div class="card" style="margin-top:12px">
+        <div class="card-header">
+          <h3>📋 Tình trạng phòng – <span id="rpt-room-month"></span></h3>
+          <input type="month" class="tab-month-input" onchange="updateGlobalMonth(this.value);renderKQKD()" style="padding:4px 8px;border-radius:7px;border:1.5px solid #e5e7eb;font-size:12px">
         </div>
-        <div>
-          <div class="card"><div class="card-header"><h3>💸 Chi tiết chi phí</h3></div><div style="padding:12px 16px" id="rpt-chiphi"></div></div>
-          <div class="card"><div class="card-header"><h3>⚠️ Công nợ</h3></div><div style="padding:12px 16px" id="rpt-congno"></div></div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-header"><h3>📋 Tình trạng từng phòng</h3></div>
         <table><thead><tr><th>Phòng</th><th>Khách thuê</th><th>Giá thuê</th><th>Đã thu tháng này</th><th>Còn nợ</th><th>HĐ kết thúc</th><th>Trạng thái</th></tr></thead>
         <tbody id="rpt-table"></tbody></table>
       </div>
@@ -1597,83 +1591,158 @@ async function deleteThu(id) {
 // ===== KQKD =====
 function renderKQKD() {
   const thang = getSelMonth();
-  const [yr,mn] = thang.split('-');
-  document.getElementById('rpt-month').textContent = `Kết quả kinh doanh tháng ${mn}/${yr}`;
+  const [yrSel, mnSel] = thang.split('-');
 
-  // Data from Bank
-  const bkM = bankOfMonth(thang);
-  // Revenue = bank THU excluding Tiền cọc
-  const doanhThu = bkM.filter(b=>CAT_DOANHTHU.includes(b.chiTiet)).reduce((s,b)=>s+(b.thu||0),0);
-  const doanhThuMap = {};
-  CAT_DOANHTHU.forEach(cat=>{
-    const v = bkM.filter(b=>b.chiTiet===cat).reduce((s,b)=>s+(b.thu||0),0);
-    if (v) doanhThuMap[cat]=v;
-  });
+  // Year for the main table
+  const yrInp = document.getElementById('kqkd-year');
+  if (yrInp && !yrInp.value) yrInp.value = yrSel;
+  const yr = (yrInp?.value) || yrSel;
 
-  // Hoa hong = bank CHI category "Hoa hồng"
-  const hoaHong = bkM.filter(b=>b.chiTiet==='Hoa hồng').reduce((s,b)=>s+(b.chi||0),0);
-
-  // Chi phi = operating expenses (excluding Hoa hồng and Chuyển CĐT)
-  const chiPhiTotal = bkM.filter(b=>CAT_CHIPHI.includes(b.chiTiet)).reduce((s,b)=>s+(b.chi||0),0);
-  const chiPhiMap = {};
-  CAT_CHIPHI.forEach(cat=>{
-    const v = bkM.filter(b=>b.chiTiet===cat).reduce((s,b)=>s+(b.chi||0),0);
-    if (v) chiPhiMap[cat]=v;
-  });
-
-  // CĐT transfer
-  const cdtTransfer = bkM.filter(b=>b.chiTiet==='Chuyển CĐT').reduce((s,b)=>s+(b.chi||0),0);
-
-  // Tiền cọc (tracked separately)
-  const tienCocThu = bkM.filter(b=>b.chiTiet==='Tiền cọc').reduce((s,b)=>s+(b.thu||0),0);
-  const tienCocChi = bkM.filter(b=>b.chiTiet==='Tiền cọc').reduce((s,b)=>s+(b.chi||0),0);
-
-  const lN = doanhThu - chiPhiTotal - hoaHong;
-
-  // Số dư
-  const allSorted = [...cache.bank].sort((a,b)=>(a.ngay||'').localeCompare(b.ngay||''));
-  // Find last tx of prev month
-  const prevThang = (() => { const d = new Date(yr, mn-2, 1); return d.toISOString().slice(0,7); })();
-  const prevTx = [...allSorted].filter(b=>b.thang<=prevThang).pop();
   const coso = allCosos.find(c=>c.id===selectedCosoId);
-  const soDuDau = prevTx ? prevTx.soDu : (coso?.soDuInitial||0);
-  const lastTxMonth = [...allSorted].filter(b=>b.thang===thang).pop();
-  const soDuCuoi = lastTxMonth ? lastTxMonth.soDu : soDuDau;
+  const cosoName = (coso?.ten||'Cơ sở').toUpperCase();
+  const initSoDu = coso?.soDuInitial || 0;
 
-  // Lấp đầy
-  const occupied = cache.phong.filter(p=>p.tt==='Đang thuê').length;
-  const total = cache.phong.length;
+  // Build running balance map for ALL bank transactions
+  const allSorted = [...cache.bank].sort((a,b)=>(a.ngay||'').localeCompare(b.ngay||'')||(a.id||'').localeCompare(b.id||''));
+  let running = initSoDu;
+  const soDuMap = {};
+  allSorted.forEach(b => { running += (b.thu||0)-(b.chi||0); soDuMap[b.id]=running; });
 
-  document.getElementById('rpt-loinhuan').textContent = fmt(lN);
-  document.getElementById('rpt-loinhuan').style.color = lN>=0?'#fff':'#fca5a5';
-  document.getElementById('rpt-lapday').textContent = `Lấp đầy: ${total?Math.round(occupied/total*100):0}% (${occupied}/${total} phòng) | Số dư đầu kỳ: ${fmt(soDuDau)}`;
+  // Helper: get soDu at end of date (exclusive upper bound, 'YYYY-MM-DD')
+  function soDuBefore(dateStr) {
+    const prev = allSorted.filter(b=>b.ngay && b.ngay < dateStr);
+    return prev.length ? soDuMap[prev[prev.length-1].id] : initSoDu;
+  }
 
-  const plEl = document.getElementById('rpt-pl');
-  let plHtml = `
-    <div class="pl-row"><span>💰 Số dư đầu kỳ</span><span style="font-weight:600">${fmt(soDuDau)}</span></div>
-    <div class="pl-row"><span>📥 Doanh thu</span><span style="font-weight:700;color:#059669">+${fmt(doanhThu)}</span></div>`;
-  Object.entries(doanhThuMap).forEach(([k,v])=>{ plHtml+=`<div class="pl-row sub"><span>└ ${k}</span><span>${fmt(v)}</span></div>`; });
-  if (tienCocThu) plHtml+=`<div class="pl-row sub"><span>└ Tiền cọc (giữ trả lại)</span><span style="color:#9ca3af">${fmt(tienCocThu)}</span></div>`;
-  plHtml+=`<div class="pl-row"><span>📤 Chi phí vận hành</span><span style="font-weight:700;color:#dc2626">-${fmt(chiPhiTotal)}</span></div>`;
-  Object.entries(chiPhiMap).forEach(([k,v])=>{ plHtml+=`<div class="pl-row sub"><span>└ ${k}</span><span>${fmt(v)}</span></div>`; });
-  plHtml+=`<div class="pl-row"><span>🤝 Hoa hồng Sale</span><span style="font-weight:700;color:#7c3aed">-${fmt(hoaHong)}</span></div>`;
-  plHtml+=`<div class="${lN>=0?'pl-total':'pl-loss'}"><span>💡 Lợi nhuận</span><span>${fmt(lN)}</span></div>`;
-  if (cdtTransfer) plHtml+=`<div class="pl-cdt"><span>💸 Chuyển CĐT</span><span>-${fmt(cdtTransfer)}</span></div>`;
-  plHtml+=`<div class="pl-sodu"><span>🏦 Số dư cuối kỳ</span><span>${fmt(soDuCuoi)}</span></div>`;
-  plEl.innerHTML = plHtml;
+  // Row definitions matching the Excel template
+  const THU_ROWS = [
+    {key:'Tiền thuê',   label:'Phí thuê'},
+    {key:'Phí dịch vụ', label:'Phí dịch vụ'},
+    {key:'Tiền cọc',    label:'Phí cọc'},
+    {key:'Lãi NH',      label:'Lãi bank'},
+  ];
+  // Chi rows: fixed template order + any extra categories found in data
+  const CHI_FIXED = ['Dọn dẹp','Hoa hồng','Đồ dùng','Điện thoại','Điện','Nước','Internet','Sửa chữa','Bể bơi','Thuế','Rác','Khác'];
+  const chiExtra = [...new Set(cache.bank.filter(b=>(b.chi||0)>0&&b.chiTiet&&b.chiTiet!=='Chuyển CĐT').map(b=>b.chiTiet))].filter(c=>!CHI_FIXED.includes(c));
+  const CHI_ROWS = [...CHI_FIXED, ...chiExtra];
 
-  // Chi phi detail
-  document.getElementById('rpt-chiphi').innerHTML = Object.entries(chiPhiMap).map(([k,v])=>`<div class="report-row"><span>${k}</span><span>${fmt(v)}</span></div>`).join('')
-    || '<p style="font-size:12px;color:#9ca3af">Không có chi phí</p>';
+  // Calculate data for each month
+  const months = Array.from({length:12},(_,i)=>i+1);
+  const mData = months.map(m => {
+    const mn2 = String(m).padStart(2,'0');
+    const thangKey = `${yr}-${mn2}`;
+    const bk = allSorted.filter(b=>b.thang===thangKey);
 
-  // No
-  const total_no = cache.no.reduce((s,n)=>s+(n.sotien||0),0);
-  document.getElementById('rpt-congno').innerHTML = total_no
-    ? `<div class="report-row report-total"><span>Tổng nợ</span><span style="color:#dc2626">${fmt(total_no)}</span></div>`
-      + cache.no.map(n=>`<div class="report-row"><span>Phòng ${n.phong} - ${n.kh||''}</span><span>${fmt(n.sotien)}</span></div>`).join('')
-    : '<p style="font-size:12px;color:#059669">Không có công nợ ✓</p>';
+    const thu = {};
+    THU_ROWS.forEach(r=>{ thu[r.key] = bk.reduce((s,b)=>s+(b.chiTiet===r.key?(b.thu||0):0),0); });
+    const totalThu = Object.values(thu).reduce((s,v)=>s+v,0);
 
-  // Per room table
+    const chi = {};
+    CHI_ROWS.forEach(k=>{ chi[k] = bk.reduce((s,b)=>s+(b.chiTiet===k?(b.chi||0):0),0); });
+    const totalChi = Object.values(chi).reduce((s,v)=>s+v,0);
+
+    const cdt = bk.reduce((s,b)=>s+(b.chiTiet==='Chuyển CĐT'?(b.chi||0):0),0);
+    const soDuDau = soDuBefore(`${yr}-${mn2}-01`);
+    const lastBk = bk[bk.length-1];
+    const soDuCuoi = lastBk ? (soDuMap[lastBk.id]??soDuDau) : soDuDau;
+
+    return {m, thangKey, thu, totalThu, chi, totalChi, cdt, soDuDau, soDuCuoi, loiNhuan: totalThu-totalChi};
+  });
+
+  // Totals helper
+  const sum = fn => mData.reduce((s,d)=>s+fn(d),0);
+
+  // Cell formatter
+  const f0 = v => v ? fmt(v) : '';
+  const thStyle = 'text-align:right;padding:5px 7px;min-width:100px;font-size:11px;white-space:nowrap';
+  const td = (v,style='') => `<td style="text-align:right;padding:4px 7px;font-size:11px;border-bottom:1px solid #f3f4f6;${style}">${v}</td>`;
+  const tdB = (v,style='') => `<td style="text-align:right;padding:5px 7px;font-size:12px;font-weight:700;border-bottom:1px solid #e5e7eb;${style}">${v}</td>`;
+  const lbl = (txt,style='') => `<td style="padding:5px 12px;font-size:12px;position:sticky;left:0;background:#fff;z-index:1;border-bottom:1px solid #f3f4f6;white-space:nowrap;${style}">${txt}</td>`;
+  const lblB = (txt,bg='#fff',style='') => `<td style="padding:6px 12px;font-size:12px;font-weight:700;position:sticky;left:0;background:${bg};z-index:1;border-bottom:1px solid #e5e7eb;white-space:nowrap;${style}">${txt}</td>`;
+
+  // Header row for months
+  const monthHeaders = months.map(m=>`<th style="${thStyle}">T${m}</th>`).join('');
+
+  // Build table
+  let t = `<table style="width:100%;border-collapse:collapse;font-size:12px">
+  <thead><tr style="background:#14532d;color:#fff">
+    <th style="text-align:left;padding:8px 12px;position:sticky;left:0;background:#14532d;z-index:2;min-width:160px">${cosoName}</th>
+    ${monthHeaders}
+    <th style="${thStyle};background:#0f3d1f">Tổng</th>
+  </tr></thead><tbody>`;
+
+  // ─── Số dư đầu kỳ ───
+  t += `<tr style="background:#f8fafc">
+    ${lblB('Số dư đầu kỳ','#f8fafc')}
+    ${mData.map(d=>tdB(fmt(d.soDuDau),'color:#111827')).join('')}
+    <td style="text-align:right;padding:5px 7px;font-size:11px;color:#9ca3af;border-bottom:1px solid #e5e7eb">—</td>
+  </tr>`;
+
+  // ─── Doanh thu ───
+  t += `<tr style="background:#dcfce7">
+    ${lblB('Doanh thu','#dcfce7','color:#166534')}
+    ${mData.map(d=>tdB(f0(d.totalThu),'color:#166534')).join('')}
+    ${tdB(f0(sum(d=>d.totalThu)),'color:#166534')}
+  </tr>`;
+  THU_ROWS.forEach(r=>{
+    const vals = mData.map(d=>d.thu[r.key]||0);
+    if (!vals.some(v=>v>0)) return;
+    t += `<tr>
+      <td style="padding:3px 12px 3px 26px;font-size:11px;color:#374151;position:sticky;left:0;background:#fff;z-index:1;border-bottom:1px solid #f3f4f6;white-space:nowrap">${r.label}</td>
+      ${vals.map(v=>td(f0(v))).join('')}
+      ${td(f0(vals.reduce((s,v)=>s+v,0)),'font-weight:600')}
+    </tr>`;
+  });
+
+  // ─── Chi phí ───
+  t += `<tr style="background:#fee2e2">
+    ${lblB('Chi phí','#fee2e2','color:#991b1b')}
+    ${mData.map(d=>tdB(f0(d.totalChi),'color:#991b1b')).join('')}
+    ${tdB(f0(sum(d=>d.totalChi)),'color:#991b1b')}
+  </tr>`;
+  CHI_ROWS.forEach(k=>{
+    const vals = mData.map(d=>d.chi[k]||0);
+    if (!vals.some(v=>v>0)) return;
+    t += `<tr>
+      <td style="padding:3px 12px 3px 26px;font-size:11px;color:#374151;position:sticky;left:0;background:#fff;z-index:1;border-bottom:1px solid #f3f4f6;white-space:nowrap">${k}</td>
+      ${vals.map(v=>td(f0(v))).join('')}
+      ${td(f0(vals.reduce((s,v)=>s+v,0)),'font-weight:600')}
+    </tr>`;
+  });
+
+  // ─── Lợi nhuận PBP ───
+  t += `<tr style="background:#dbeafe;border-top:2px solid #93c5fd">
+    ${lblB('Lợi nhuận PBP','#dbeafe','color:#1e40af')}
+    ${mData.map(d=>{
+      const ln=d.loiNhuan;
+      const c=ln>0?'color:#1e40af':ln<0?'color:#dc2626':'color:#374151';
+      return tdB(f0(ln),c);
+    }).join('')}
+    ${(()=>{const s=sum(d=>d.loiNhuan);return tdB(f0(s),s>=0?'color:#1e40af':'color:#dc2626');})()}
+  </tr>`;
+
+  // ─── Chuyển tiền cho CĐT ───
+  const cdtVals = mData.map(d=>d.cdt||0);
+  if (cdtVals.some(v=>v>0)) {
+    t += `<tr>
+      ${lbl('Chuyển tiền cho CĐT')}
+      ${cdtVals.map(v=>td(f0(v))).join('')}
+      ${td(f0(cdtVals.reduce((s,v)=>s+v,0)),'font-weight:600')}
+    </tr>`;
+  }
+
+  // ─── Số dư cuối kỳ ───
+  t += `<tr style="background:#14532d">
+    <td style="padding:6px 12px;font-weight:700;color:#fff;position:sticky;left:0;background:#14532d;z-index:1;white-space:nowrap">Số dư cuối kỳ</td>
+    ${mData.map(d=>`<td style="text-align:right;padding:6px 7px;font-weight:700;color:#fff;font-size:12px">${fmt(d.soDuCuoi)}</td>`).join('')}
+    <td style="text-align:right;padding:6px 7px;color:#6ee7b7;font-size:11px">—</td>
+  </tr>`;
+
+  t += `</tbody></table>`;
+  document.getElementById('kqkd-table-wrap').innerHTML = t;
+
+  // Per room table (uses global selected month)
+  document.getElementById('rpt-room-month').textContent = `${mnSel}/${yrSel}`;
   const rptRows = cache.phong.filter(p=>p.ten).map(p=>{
     const thuP = cache.thu.filter(t=>t.phong===p.so&&t.thang===thang).reduce((s,t)=>s+(t.sotien||0),0);
     const noP = cache.no.find(n=>n.phong===p.so);
