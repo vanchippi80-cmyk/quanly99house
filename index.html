@@ -1215,23 +1215,6 @@ function renderBank() {
     </tr>`;
   });
 
-  // Update filter UI: clear button + summary
-  const clearBtn = document.getElementById('btn-clear-filter');
-  const summaryEl = document.getElementById('bank-filter-summary');
-  if (clearBtn) clearBtn.style.display = filterCat ? 'inline' : 'none';
-  if (summaryEl) {
-    if (filterCat && display.length >= 0) {
-      const filtThu = display.reduce((s,b)=>s+(b.thu||0),0);
-      const filtChi = display.reduce((s,b)=>s+(b.chi||0),0);
-      let parts = [display.length+'/'+monthBk.length+' giao dịch'];
-      if (filtThu) parts.push('THU: '+fmt(filtThu));
-      if (filtChi) parts.push('CHI: '+fmt(filtChi));
-      summaryEl.textContent = parts.join('  ·  ');
-    } else {
-      summaryEl.textContent = '';
-    }
-  }
-
   // Total row at bottom
   if (display.length > 0) {
     const filtThu = display.reduce((s,b)=>s+(b.thu||0),0);
@@ -1253,6 +1236,25 @@ function renderBank() {
   }
 
   document.getElementById('bank-table').innerHTML = html;
+
+  // Update filter UI AFTER DOM is set
+  (function() {
+    const clearBtn = document.getElementById('btn-clear-filter');
+    const summaryEl = document.getElementById('bank-filter-summary');
+    if (clearBtn) clearBtn.style.display = filterCat ? '' : 'none';
+    if (!summaryEl) return;
+    if (filterCat) {
+      const filtThu = display.reduce((s,b)=>s+(b.thu||0),0);
+      const filtChi = display.reduce((s,b)=>s+(b.chi||0),0);
+      let parts = [display.length + '/' + monthBk.length + ' giao dịch'];
+      if (filtThu) parts.push('THU: ' + fmt(filtThu));
+      if (filtChi) parts.push('CHI: ' + fmt(filtChi));
+      summaryEl.textContent = parts.join(' · ');
+    } else {
+      summaryEl.textContent = '';
+    }
+  })();
+
   // Wire up inline edit via event delegation
   const tbody = document.getElementById('bank-table');
   tbody.querySelectorAll('.cell-edit').forEach(td => {
