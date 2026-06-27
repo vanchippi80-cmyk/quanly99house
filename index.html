@@ -1613,13 +1613,20 @@ function renderKQKD() {
     return prev.length ? soDuMap[prev[prev.length-1].id] : initSoDu;
   }
 
-  // Row definitions matching the Excel template
-  const THU_ROWS = [
+  // Row definitions: fixed order first, then any extra thu categories found in actual data
+  const THU_FIXED = [
     {key:'Tiền thuê',   label:'Phí thuê'},
     {key:'Phí dịch vụ', label:'Phí dịch vụ'},
     {key:'Tiền cọc',    label:'Phí cọc'},
     {key:'Lãi NH',      label:'Lãi bank'},
   ];
+  const thuFixedKeys = THU_FIXED.map(r=>r.key);
+  // Auto-detect any extra thu categories in the actual bank data (not in fixed list, not CĐT)
+  const thuExtra = [...new Set(
+    cache.bank.filter(b=>(b.thu||0)>0&&b.chiTiet&&(b.chiTiet||'').trim()!=='Chuyển CĐT')
+    .map(b=>(b.chiTiet||'').trim())
+  )].filter(k=>!thuFixedKeys.includes(k));
+  const THU_ROWS = [...THU_FIXED, ...thuExtra.map(k=>({key:k,label:k}))];
   // Chi rows: fixed template order + any extra categories found in data
   const CHI_FIXED = ['Dọn dẹp','Hoa hồng','Đồ dùng','Điện thoại','Điện','Nước','Internet','Sửa chữa','Bể bơi','Thuế','Rác','Khác'];
   const chiExtra = [...new Set(
@@ -1636,9 +1643,10 @@ function renderKQKD() {
     const bk = allSorted.filter(b=>b.thang===thangKey);
 
     const thu = {};
-    // Only count positive thu entries (exclude negative returns like "Trả cọc" with thu < 0)
+    // Only count positive thu entries per category
     THU_ROWS.forEach(r=>{ thu[r.key] = bk.reduce((s,b)=>s+((b.chiTiet||'').trim()===r.key&&(b.thu||0)>0?(b.thu):0),0); });
-    const totalThu = Object.values(thu).reduce((s,v)=>s+v,0);
+    // totalThu = sum of ALL positive thu (catches any categories not in THU_ROWS)
+    const totalThu = bk.reduce((s,b)=>s+((b.thu||0)>0?b.thu:0),0);
 
     const chi = {};
     CHI_ROWS.forEach(k=>{ chi[k] = bk.reduce((s,b)=>s+((b.chiTiet||'').trim()===k?(b.chi||0):0),0); });
