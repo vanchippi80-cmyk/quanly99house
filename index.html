@@ -1408,8 +1408,11 @@ function bankCellSelect(td, id, field, currentVal) {
   });
   td.innerHTML = ''; td.appendChild(sel); sel.focus();
   sel.addEventListener('change', async () => {
-    await db.collection('bank').doc(id).update({ [field]: sel.value });
-    sel.blur();
+    const newVal = sel.value;
+    const bk = cache.bank.find(b => b.id === id);
+    if (bk) bk[field] = newVal;
+    renderBank();
+    await db.collection('bank').doc(id).update({ [field]: newVal });
   });
   sel.addEventListener('keydown', e => { if (e.key === 'Escape') renderBank(); });
 }
