@@ -455,24 +455,35 @@ tr:hover td{background:#fafafa}
 
 <!-- Modal Danh mục Thu Chi -->
 <div class="modal-overlay" id="modal-danhmuc">
-  <div class="modal" style="width:500px">
-    <div class="modal-header"><h3>⚙️ Danh mục Thu Chi</h3><button class="modal-close" onclick="closeModal('modal-danhmuc')">✕</button></div>
-    <div class="modal-body">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+  <div class="modal" style="width:640px;max-height:85vh;display:flex;flex-direction:column">
+    <div class="modal-header">
+      <div>
+        <h3 style="margin:0">⚙️ Danh mục Thu Chi</h3>
+        <div style="font-size:11px;color:#6b7280;margin-top:2px" id="dm-coso-label"></div>
+      </div>
+      <button class="modal-close" onclick="closeModal('modal-danhmuc')">✕</button>
+    </div>
+    <div class="modal-body" style="overflow-y:auto;flex:1">
+      <p style="font-size:12px;color:#6b7280;margin:0 0 16px 0">Chỉnh sửa các danh mục thu/chi. Thay đổi sẽ áp dụng ngay cho tất cả các tháng.</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
         <div>
-          <div style="font-weight:700;font-size:12px;color:#374151;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">📥 Danh mục THU</div>
-          <ul id="dm-thu-list" style="list-style:none;padding:0;margin:0 0 10px 0;display:flex;flex-direction:column;gap:4px"></ul>
+          <div style="font-weight:700;font-size:13px;color:#111827;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #16a34a">Danh mục THU</div>
+          <div id="dm-thu-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px"></div>
           <div style="display:flex;gap:6px">
-            <input type="text" id="dm-thu-input" placeholder="Thêm danh mục..." style="flex:1;padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px">
-            <button class="btn btn-primary btn-sm" onclick="addDanhmuc('thu')">+ Thêm</button>
+            <input type="text" id="dm-thu-input" placeholder="Tên danh mục mới..."
+              style="flex:1;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:12px"
+              onkeydown="if(event.key==='Enter')addDanhmuc('thu')">
+            <button class="btn btn-primary btn-sm" onclick="addDanhmuc('thu')" style="white-space:nowrap">+ Thêm</button>
           </div>
         </div>
         <div>
-          <div style="font-weight:700;font-size:12px;color:#374151;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">📤 Danh mục CHI</div>
-          <ul id="dm-chi-list" style="list-style:none;padding:0;margin:0 0 10px 0;display:flex;flex-direction:column;gap:4px"></ul>
+          <div style="font-weight:700;font-size:13px;color:#111827;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #16a34a">Danh mục CHI</div>
+          <div id="dm-chi-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px"></div>
           <div style="display:flex;gap:6px">
-            <input type="text" id="dm-chi-input" placeholder="Thêm danh mục..." style="flex:1;padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px">
-            <button class="btn btn-primary btn-sm" onclick="addDanhmuc('chi')">+ Thêm</button>
+            <input type="text" id="dm-chi-input" placeholder="Tên danh mục mới..."
+              style="flex:1;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:12px"
+              onkeydown="if(event.key==='Enter')addDanhmuc('chi')">
+            <button class="btn btn-primary btn-sm" onclick="addDanhmuc('chi')" style="white-space:nowrap">+ Thêm</button>
           </div>
         </div>
       </div>
@@ -925,6 +936,7 @@ function switchCoso(cosoId) {
   document.getElementById('topbar-coso').textContent = cur ? cur.ten : '';
   unsubscribes.forEach(u=>u()); unsubscribes=[];
   subscribeData();
+  loadDanhmuc();
   const noBtn = document.getElementById('no-coso-btn');
   if (noBtn) noBtn.style.display = currentRole==='owner'?'inline-flex':'none';
   if (currentTab==='no-coso') switchTab(NAV_CONFIG[currentRole]?.[0]?.id || NAV_CONFIG[currentRole]?.[1]?.id || 'bank');
@@ -1223,26 +1235,32 @@ async function deleteBankEntry(id) {
   toast('Đã xoá','success');
 }
 
-// ===== DANH MUC MANAGEMENT =====
+// ===== DANH MUC MANAGEMENT (per-coso) =====
 const DEFAULT_THU = ['Tiền thuê','Phí dịch vụ','Tiền cọc','Lãi NH'];
 const DEFAULT_CHI = ['Chuyển CĐT','Dọn dẹp','Hoa hồng','Điện','Nước','Internet','Sửa chữa','Bể bơi','Thuế','Rác','Khác'];
 let customThu = [], customChi = [];
 
-function getAllCats() {
-  return [...DEFAULT_THU, ...customThu, ...DEFAULT_CHI, ...customChi];
-}
-function getAllThuCats() { return [...DEFAULT_THU, ...customThu]; }
-function getAllChiCats() { return [...DEFAULT_CHI, ...customChi]; }
+function getAllCats() { return [...customThu, ...customChi]; }
+function getAllThuCats() { return customThu.length ? customThu : DEFAULT_THU; }
+function getAllChiCats() { return customChi.length ? customChi : DEFAULT_CHI; }
+function getAllCatsForSelect() { return [...getAllThuCats(), ...getAllChiCats()]; }
 
 async function loadDanhmuc() {
+  if (!selectedCosoId) return;
+  customThu = []; customChi = [];
   try {
-    const doc = await db.collection('settings').doc('danhmuc').get();
+    const doc = await db.collection('danhmuc').doc(selectedCosoId).get();
     if (doc.exists) {
-      customThu = doc.data().thu || [];
-      customChi = doc.data().chi || [];
+      customThu = doc.data().thu || [...DEFAULT_THU];
+      customChi = doc.data().chi || [...DEFAULT_CHI];
+    } else {
+      // First time: init with defaults
+      customThu = [...DEFAULT_THU];
+      customChi = [...DEFAULT_CHI];
+      await saveDanhmuc();
     }
-    rebuildFilterDropdown();
-  } catch(e) { console.log('loadDanhmuc:', e.message); }
+  } catch(e) { console.log('loadDanhmuc:', e.message); customThu=[...DEFAULT_THU]; customChi=[...DEFAULT_CHI]; }
+  rebuildFilterDropdown();
 }
 
 function rebuildFilterDropdown() {
@@ -1250,7 +1268,7 @@ function rebuildFilterDropdown() {
   if (!sel) return;
   const cur = sel.value;
   sel.innerHTML = '<option value="">Lọc chi tiết</option>';
-  getAllCats().forEach(c => {
+  getAllCatsForSelect().forEach(c => {
     const o = document.createElement('option');
     o.value = o.textContent = c;
     if (c === cur) o.selected = true;
@@ -1259,53 +1277,55 @@ function rebuildFilterDropdown() {
 }
 
 function openModalDanhmuc() {
+  const coso = allCosos.find(c=>c.id===selectedCosoId);
+  const label = document.getElementById('dm-coso-label');
+  if (label) label.textContent = coso ? 'Cơ sở: ' + coso.ten : '';
   renderDanhmucList();
   openModal('modal-danhmuc');
 }
 
 function renderDanhmucList() {
-  const renderList = (listId, items, defaultItems, type) => {
-    const ul = document.getElementById(listId);
-    if (!ul) return;
-    ul.innerHTML = [...defaultItems.map(item =>
-      `<li style="display:flex;align-items:center;justify-content:space-between;padding:4px 8px;background:#f9fafb;border-radius:6px;font-size:12px">
-        <span>${item}</span><span style="color:#9ca3af;font-size:10px">mặc định</span></li>`
-    ), ...items.map((item, i) =>
-      `<li style="display:flex;align-items:center;justify-content:space-between;padding:4px 8px;background:#f0fdf4;border-radius:6px;font-size:12px">
-        <span>${item}</span>
-        <button onclick="deleteDanhmuc('${type}',${i})" style="border:none;background:none;color:#ef4444;cursor:pointer;font-size:13px;padding:0 4px">✕</button>
-      </li>`
-    )].join('');
+  const renderList = (containerId, items, type) => {
+    const div = document.getElementById(containerId);
+    if (!div) return;
+    div.innerHTML = items.map((item, i) =>
+      `<div style="display:flex;align-items:center;gap:8px">
+        <div style="flex:1;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;background:#fff;color:#111827">${item}</div>
+        <button onclick="deleteDanhmuc('${type}',${i})"
+          style="width:28px;height:28px;border:none;background:#dc2626;color:#fff;border-radius:6px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0">✕</button>
+      </div>`
+    ).join('');
   };
-  renderList('dm-thu-list', customThu, DEFAULT_THU, 'thu');
-  renderList('dm-chi-list', customChi, DEFAULT_CHI, 'chi');
+  renderList('dm-thu-list', getAllThuCats(), 'thu');
+  renderList('dm-chi-list', getAllChiCats(), 'chi');
 }
 
 async function addDanhmuc(type) {
-  const input = document.getElementById(`dm-${type}-input`);
+  const input = document.getElementById('dm-'+type+'-input');
   const val = input.value.trim();
   if (!val) return;
-  if (getAllCats().includes(val)) { toast('Danh mục đã tồn tại','error'); return; }
+  if (getAllCatsForSelect().includes(val)) { toast('Danh mục đã tồn tại','error'); return; }
   if (type === 'thu') customThu.push(val);
   else customChi.push(val);
   input.value = '';
   await saveDanhmuc();
   renderDanhmucList();
   rebuildFilterDropdown();
-  toast('Đã thêm danh mục','success');
 }
 
 async function deleteDanhmuc(type, index) {
+  if (!confirm('Xoá danh mục này?')) return;
   if (type === 'thu') customThu.splice(index, 1);
   else customChi.splice(index, 1);
   await saveDanhmuc();
   renderDanhmucList();
   rebuildFilterDropdown();
-  toast('Đã xoá danh mục','success');
+  toast('Đã xoá','success');
 }
 
 async function saveDanhmuc() {
-  await db.collection('settings').doc('danhmuc').set({ thu: customThu, chi: customChi }, { merge: true });
+  if (!selectedCosoId) return;
+  await db.collection('danhmuc').doc(selectedCosoId).set({ thu: customThu, chi: customChi });
 }
 
 // ===== INLINE CELL EDITING =====
@@ -1336,7 +1356,7 @@ function bankCellInput(td, id, field, type, currentVal) {
 function bankCellSelect(td, id, field, currentVal) {
   const sel = document.createElement('select');
   sel.className = 'cell-select';
-  getAllCats().forEach(c => {
+  getAllCatsForSelect().forEach(c => {
     const o = document.createElement('option');
     o.value = o.textContent = c;
     if (c === currentVal) o.selected = true;
