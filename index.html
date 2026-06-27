@@ -254,12 +254,17 @@ tr:hover td{background:#fafafa}
         <div class="stat-card blue"><div class="lbl">Giao dịch tháng</div><div class="val" id="bk-count">—</div><div class="sub" id="bk-count-sub"></div></div>
       </div>
       <div class="card">
-        <div class="card-header">
+        <div class="card-header" style="flex-wrap:wrap;gap:8px">
           <h3 id="bank-header">Bank – Tháng</h3>
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-            <select id="bank-filter-cat" onchange="renderBank()" style="padding:5px 8px;border-radius:7px;border:1px solid #e5e7eb;font-size:11px">
-              <option value="">Lọc chi tiết</option>
-            </select>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-left:auto">
+            <div style="display:flex;align-items:center;gap:6px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:4px 10px">
+              <span style="font-size:11px;color:#6b7280;white-space:nowrap">🔍 Lọc chi tiết:</span>
+              <select id="bank-filter-cat" onchange="renderBank()" style="border:none;background:transparent;font-size:12px;color:#111827;outline:none;cursor:pointer;max-width:160px">
+                <option value="">Tất cả</option>
+              </select>
+              <button id="btn-clear-filter" onclick="clearBankFilter()" style="display:none;border:none;background:none;color:#6b7280;cursor:pointer;font-size:11px;padding:0;white-space:nowrap">✕ Xóa lọc</button>
+            </div>
+            <span id="bank-filter-summary" style="font-size:12px;color:#374151;white-space:nowrap"></span>
             <button class="btn btn-secondary btn-sm" onclick="openModalDanhmuc()" title="Quản lý danh mục">⚙️ Danh mục</button>
             <button class="btn btn-primary" onclick="addBankRow()">+ Thêm giao dịch</button>
             <button class="btn btn-success" id="btn-bank-save" onclick="saveBankRows()" style="display:none">💾 Lưu</button>
@@ -1047,6 +1052,11 @@ function renderBankMonthTabs() {
   }).join('');
 }
 
+function clearBankFilter() {
+  const sel = document.getElementById('bank-filter-cat');
+  if (sel) { sel.value = ''; renderBank(); }
+}
+
 function switchBankMonth(month) {
   if (bankEditBuffer.length && !confirm('Bạn có thay đổi chưa lưu. Tiếp tục?')) return;
   bankSelectedMonth = month;
@@ -1205,14 +1215,30 @@ function renderBank() {
     </tr>`;
   });
 
-  // Total row for filtered results
+  // Update filter UI: clear button + summary
+  const clearBtn = document.getElementById('btn-clear-filter');
+  const summaryEl = document.getElementById('bank-filter-summary');
+  if (clearBtn) clearBtn.style.display = filterCat ? 'inline' : 'none';
+  if (summaryEl) {
+    if (filterCat && display.length >= 0) {
+      const filtThu = display.reduce((s,b)=>s+(b.thu||0),0);
+      const filtChi = display.reduce((s,b)=>s+(b.chi||0),0);
+      let parts = [display.length+'/'+monthBk.length+' giao dịch'];
+      if (filtThu) parts.push('THU: '+fmt(filtThu));
+      if (filtChi) parts.push('CHI: '+fmt(filtChi));
+      summaryEl.textContent = parts.join('  ·  ');
+    } else {
+      summaryEl.textContent = '';
+    }
+  }
+
+  // Total row at bottom
   if (display.length > 0) {
     const filtThu = display.reduce((s,b)=>s+(b.thu||0),0);
     const filtChi = display.reduce((s,b)=>s+(b.chi||0),0);
-    const isFiltered = filterCat !== '';
     html += `<tr style="background:#f9fafb;border-top:2px solid #e5e7eb">
       <td colspan="3" style="font-weight:700;font-size:12px;color:#374151;padding:8px 12px">
-        ${isFiltered ? 'Tổng lọc: <span style="color:#16a34a">'+display.length+' giao dịch</span>' : 'Tổng tháng'}
+        ${filterCat?'Tổng lọc':'Tổng tháng'}
       </td>
       <td></td>
       <td style="font-weight:800;font-size:13px;text-align:right;color:#111827">${filtThu?fmt(filtThu):''}</td>
