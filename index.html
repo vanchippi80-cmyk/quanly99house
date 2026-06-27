@@ -270,7 +270,6 @@ tr:hover td{background:#fafafa}
             <button class="btn btn-success" id="btn-bank-save" onclick="saveBankRows()" style="display:none">💾 Lưu</button>
           </div>
         </div>
-        <div id="bank-filter-bar" style="display:none;padding:8px 16px;background:#f0fdf4;border-bottom:1px solid #dcfce7;font-size:12px;color:#166534;display:none;gap:8px;align-items:center;flex-wrap:wrap"></div>
         <div style="overflow-x:auto">
         <table style="min-width:680px">
           <thead><tr>
@@ -1174,12 +1173,24 @@ function renderBank() {
   const canEdit = ['owner','manager'].includes(currentRole);
 
   let stt = 1;
+  const filtThuSummary = display.reduce((s,b)=>s+(b.thu||0),0);
+  const filtChiSummary = display.reduce((s,b)=>s+(b.chi||0),0);
+  const filterSummaryRow = filterCat ? `<tr style="background:#ecfdf5;border-bottom:1px solid #bbf7d0">
+    <td colspan="3" style="padding:6px 12px;font-size:11px;color:#166534">
+      🔍 <b>${filterCat}</b> &nbsp;·&nbsp; ${display.length}/${monthBk.length} giao dịch
+    </td>
+    <td></td>
+    <td style="font-size:11px;color:#166534;font-weight:700;text-align:right">${filtThuSummary?fmt(filtThuSummary):''}</td>
+    <td style="font-size:11px;color:#166534;font-weight:700;text-align:right">${filtChiSummary?fmt(filtChiSummary):''}</td>
+    <td style="font-size:11px;color:#166534;font-weight:700;text-align:right">${fmt(filtThuSummary-filtChiSummary)}</td>
+    <td></td>
+  </tr>` : '';
   let html = `<tr style="background:#f0fdf4">
     <td colspan="5" style="font-weight:700;font-size:12px;color:#374151">Số dư đầu kỳ</td>
     <td></td>
     <td style="font-weight:800;color:#111827;font-size:13px;text-align:right">${fmt(soDuDauKy)}</td>
     <td></td>
-  </tr>`;
+  </tr>${filterSummaryRow}`;
 
   rebuildFilterDropdown();
   // Store data for inline editing access by ID
@@ -1238,27 +1249,9 @@ function renderBank() {
 
   document.getElementById('bank-table').innerHTML = html;
 
-  // Update filter bar
+  // Update clear button
   const _clearBtn = document.getElementById('btn-clear-filter');
-  const _filterBar = document.getElementById('bank-filter-bar');
   if (_clearBtn) _clearBtn.style.display = filterCat ? '' : 'none';
-  if (_filterBar) {
-    if (filterCat) {
-      const _thu = display.reduce((s,b)=>s+(b.thu||0),0);
-      const _chi = display.reduce((s,b)=>s+(b.chi||0),0);
-      let _parts = [];
-      _parts.push(`<span style="font-weight:600">${filterCat}</span>`);
-      _parts.push(`${display.length}/${monthBk.length} giao dịch`);
-      if (_thu) _parts.push(`THU: <b>${fmt(_thu)}</b>`);
-      if (_chi) _parts.push(`CHI: <b>${fmt(_chi)}</b>`);
-      if (_thu || _chi) _parts.push(`Chênh lệch: <b>${fmt(_thu-_chi)}</b>`);
-      _filterBar.innerHTML = '🔍 ' + _parts.join(' &nbsp;·&nbsp; ');
-      _filterBar.style.display = 'flex';
-    } else {
-      _filterBar.style.display = 'none';
-      _filterBar.innerHTML = '';
-    }
-  }
 
   // Wire up inline edit via event delegation
   const tbody = document.getElementById('bank-table');
