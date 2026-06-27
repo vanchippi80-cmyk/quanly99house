@@ -1159,21 +1159,19 @@ function renderBank() {
   </tr>`;
 
   rebuildFilterDropdown();
-  const allCats = getAllCats();
+  // Store data for inline editing access by ID
+  window._bankDataMap = window._bankDataMap || {};
+  display.forEach(b => { window._bankDataMap[b.id] = b; });
+
   display.forEach(b => {
-    const catOpts = allCats.map(c=>`<option${c===b.chiTiet?' selected':''}>${c}</option>`).join('');
+    const badge = `<span class="badge ${catBadge[b.chiTiet]||'bgr'}">${b.chiTiet||''}</span>`;
     html += `<tr>
       <td style="color:#6b7280;font-size:11px;text-align:center">${stt++}</td>
-      <td class="cell-edit" onclick="editBankCell(this,'date','${b.id}','ngay','${b.ngay||''}')">
-        <span>${b.ngay||''}</span></td>
-      <td class="cell-edit" onclick="editBankCell(this,'text','${b.id}','noiDung',\`${(b.noiDung||'').replace(/`/g,"'")}\`)">
-        <span>${b.noiDung||''}</span></td>
-      <td class="cell-edit" onclick="editBankCellSelect(this,'${b.id}','chiTiet','${b.chiTiet||''}')">
-        <span class="badge ${catBadge[b.chiTiet]||'bgr'}">${b.chiTiet||''}</span></td>
-      <td class="bank-thu cell-edit" onclick="editBankCell(this,'number','${b.id}','thu',${b.thu||0})">
-        <span>${b.thu?fmt(b.thu):''}</span></td>
-      <td class="bank-chi cell-edit" onclick="editBankCell(this,'number','${b.id}','chi',${b.chi||0})">
-        <span>${b.chi?fmt(b.chi):''}</span></td>
+      <td class="cell-edit" data-id="${b.id}" data-field="ngay" data-type="date"><span>${b.ngay||''}</span></td>
+      <td class="cell-edit" data-id="${b.id}" data-field="noiDung" data-type="text"><span>${(b.noiDung||'').replace(/</g,'&lt;')}</span></td>
+      <td class="cell-edit" data-id="${b.id}" data-field="chiTiet" data-type="select"><span class="badge ${catBadge[b.chiTiet]||'bgr'}">${b.chiTiet||''}</span></td>
+      <td class="bank-thu cell-edit" data-id="${b.id}" data-field="thu" data-type="number"><span>${b.thu?fmt(b.thu):''}</span></td>
+      <td class="bank-chi cell-edit" data-id="${b.id}" data-field="chi" data-type="number"><span>${b.chi?fmt(b.chi):''}</span></td>
       <td style="font-size:12px;color:#111827;font-weight:600;text-align:right">${fmt(soDuMap[b.id]??0)}</td>
       <td>${canEdit?`<button class="btn btn-danger btn-sm" onclick="deleteBankEntry('${b.id}')">✕</button>`:''}</td>
     </tr>`;
@@ -1200,6 +1198,23 @@ function renderBank() {
   }
 
   document.getElementById('bank-table').innerHTML = html;
+  // Wire up inline edit via event delegation
+  const tbody = document.getElementById('bank-table');
+  tbody.querySelectorAll('.cell-edit').forEach(td => {
+    td.addEventListener('click', function(e) {
+      if (this.querySelector('input,select')) return;
+      const id = this.dataset.id;
+      const field = this.dataset.field;
+      const type = this.dataset.type;
+      const bData = window._bankDataMap[id];
+      if (!bData) return;
+      if (type === 'select') {
+        bankCellSelect(this, id, field, bData[field]||'');
+      } else {
+        bankCellInput(this, id, field, type, bData[field]);
+      }
+    });
+  });
 }
 
 async async function deleteBankEntry(id) {
@@ -1294,31 +1309,23 @@ async function saveDanhmuc() {
 }
 
 // ===== INLINE CELL EDITING =====
-function editBankCell(td, type, id, field, currentVal) {
-  if (td.querySelector('input')) return; // already editing
-  const span = td.querySelector('span');
+function bankCellInput(td, id, field, type, currentVal) {
   const input = document.createElement('input');
   input.type = type;
   input.className = 'cell-input';
-  input.value = type === 'number' ? (currentVal || 0) : (currentVal || '');
+  input.value = (type === 'number') ? (Number(currentVal)||0) : (currentVal||'');
   if (type === 'number') input.style.textAlign = 'right';
-
-  td.innerHTML = '';
-  td.appendChild(input);
+  td.innerHTML = ''; td.appendChild(input);
   input.focus();
-  if (type !== 'date') input.select();
+  try { if (type !== 'date') input.select(); } catch(e){}
 
   const save = async () => {
     let val = input.value;
-    if (type === 'number') val = parseFloat(val) || 0;
-    if (field === 'ngay' && val) {
-      await db.collection('bank').doc(id).update({ ngay: val, thang: val.slice(0,7) });
-    } else if (val !== undefined) {
-      await db.collection('bank').doc(id).update({ [field]: val });
-    }
-    // renderBank will be called by onSnapshot
+    if (type === 'number') val = parseFloat(val)||0;
+    const upd = { [field]: val };
+    if (field === 'ngay' && val) upd.thang = val.slice(0,7);
+    await db.collection('bank').doc(id).update(upd);
   };
-
   input.addEventListener('blur', save);
   input.addEventListener('keydown', e => {
     if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
@@ -1326,8 +1333,7 @@ function editBankCell(td, type, id, field, currentVal) {
   });
 }
 
-function editBankCellSelect(td, id, field, currentVal) {
-  if (td.querySelector('select')) return;
+function bankCellSelect(td, id, field, currentVal) {
   const sel = document.createElement('select');
   sel.className = 'cell-select';
   getAllCats().forEach(c => {
@@ -1336,21 +1342,12 @@ function editBankCellSelect(td, id, field, currentVal) {
     if (c === currentVal) o.selected = true;
     sel.appendChild(o);
   });
-
-  td.innerHTML = '';
-  td.appendChild(sel);
-  sel.focus();
-
-  const save = async () => {
-    const val = sel.value;
-    await db.collection('bank').doc(id).update({ [field]: val });
-  };
-
-  sel.addEventListener('change', () => { save(); sel.blur(); });
-  sel.addEventListener('blur', () => { /* onSnapshot will re-render */ });
-  sel.addEventListener('keydown', e => {
-    if (e.key === 'Escape') renderBank();
+  td.innerHTML = ''; td.appendChild(sel); sel.focus();
+  sel.addEventListener('change', async () => {
+    await db.collection('bank').doc(id).update({ [field]: sel.value });
+    sel.blur();
   });
+  sel.addEventListener('keydown', e => { if (e.key === 'Escape') renderBank(); });
 }
 
 // ===== UPLOAD EXCEL =====
