@@ -1626,7 +1626,8 @@ function renderKQKD() {
     cache.bank.filter(b=>(b.thu||0)>0&&b.chiTiet&&(b.chiTiet||'').trim()!=='Chuyển CĐT')
     .map(b=>(b.chiTiet||'').trim())
   )].filter(k=>!thuFixedKeys.includes(k));
- 
+  const THU_ROWS = [...THU_FIXED, ...thuExtra.map(k=>({key:k,label:k}))];
+
   // Chi rows: fixed template order + any extra categories found in data
   const CHI_FIXED = ['Dọn dẹp','Hoa hồng','Đồ dùng','Điện thoại','Điện','Nước','Internet','Sửa chữa','Bể bơi','Thuế','Rác','Khác'];
   const chiExtra = [...new Set(
