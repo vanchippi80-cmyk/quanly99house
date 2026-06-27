@@ -162,6 +162,10 @@ tr:hover td{background:#fafafa}
 .bank-edit-row td{padding:5px 8px}
 .bank-edit-row input,.bank-edit-row select{border:1px solid #d1d5db;border-radius:5px;padding:4px 6px;font-size:12px;width:100%;background:#fff;box-sizing:border-box}
 .bank-edit-row input:focus,.bank-edit-row select:focus{border-color:#16a34a;outline:none}
+.cell-edit{cursor:pointer}
+.cell-edit:hover{background:#f0fdf4;border-radius:4px}
+.cell-input{border:1px solid #16a34a;border-radius:5px;padding:3px 6px;font-size:12px;width:100%;background:#fff;box-sizing:border-box;outline:none}
+.cell-select{border:1px solid #16a34a;border-radius:5px;padding:3px 4px;font-size:12px;background:#fff;outline:none;width:100%}
 @media print{.sidebar,.topbar,.btn,.modal-overlay,#toast{display:none!important}.main{margin-left:0}}
 </style>
 </head>
@@ -255,11 +259,8 @@ tr:hover td{background:#fafafa}
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
             <select id="bank-filter-cat" onchange="renderBank()" style="padding:5px 8px;border-radius:7px;border:1px solid #e5e7eb;font-size:11px">
               <option value="">Lọc chi tiết</option>
-              <option>Tiền thuê</option><option>Phí dịch vụ</option><option>Tiền cọc</option><option>Lãi NH</option>
-              <option>Chuyển CĐT</option><option>Dọn dẹp</option><option>Hoa hồng</option>
-              <option>Điện</option><option>Nước</option><option>Internet</option>
-              <option>Sửa chữa</option><option>Bể bơi</option><option>Thuế</option><option>Rác</option><option>Khác</option>
             </select>
+            <button class="btn btn-secondary btn-sm" onclick="openModalDanhmuc()" title="Quản lý danh mục">⚙️ Danh mục</button>
             <button class="btn btn-primary" onclick="addBankRow()">+ Thêm giao dịch</button>
             <button class="btn btn-success" id="btn-bank-save" onclick="saveBankRows()" style="display:none">💾 Lưu</button>
           </div>
@@ -451,6 +452,36 @@ tr:hover td{background:#fafafa}
 </div>
 
 <!-- MODALS -->
+
+<!-- Modal Danh mục Thu Chi -->
+<div class="modal-overlay" id="modal-danhmuc">
+  <div class="modal" style="width:500px">
+    <div class="modal-header"><h3>⚙️ Danh mục Thu Chi</h3><button class="modal-close" onclick="closeModal('modal-danhmuc')">✕</button></div>
+    <div class="modal-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div>
+          <div style="font-weight:700;font-size:12px;color:#374151;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">📥 Danh mục THU</div>
+          <ul id="dm-thu-list" style="list-style:none;padding:0;margin:0 0 10px 0;display:flex;flex-direction:column;gap:4px"></ul>
+          <div style="display:flex;gap:6px">
+            <input type="text" id="dm-thu-input" placeholder="Thêm danh mục..." style="flex:1;padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px">
+            <button class="btn btn-primary btn-sm" onclick="addDanhmuc('thu')">+ Thêm</button>
+          </div>
+        </div>
+        <div>
+          <div style="font-weight:700;font-size:12px;color:#374151;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">📤 Danh mục CHI</div>
+          <ul id="dm-chi-list" style="list-style:none;padding:0;margin:0 0 10px 0;display:flex;flex-direction:column;gap:4px"></ul>
+          <div style="display:flex;gap:6px">
+            <input type="text" id="dm-chi-input" placeholder="Thêm danh mục..." style="flex:1;padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px">
+            <button class="btn btn-primary btn-sm" onclick="addDanhmuc('chi')">+ Thêm</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-danhmuc')">Đóng</button>
+    </div>
+  </div>
+</div>
 
 <!-- Modal Bank Entry -->
 <div class="modal-overlay" id="modal-bank">
@@ -824,7 +855,7 @@ function setupApp(user, udata) {
   const rb = document.getElementById('topbar-role');
   rb.textContent = currentRole; rb.className = 'role-badge role-'+currentRole;
   buildNav(); populateMonthSelect();
-  subscribeCosos(); subscribeUsers();
+  subscribeCosos(); subscribeUsers(); loadDanhmuc();
 }
 
 function buildNav() {
@@ -1127,14 +1158,22 @@ function renderBank() {
     <td></td>
   </tr>`;
 
+  rebuildFilterDropdown();
+  const allCats = getAllCats();
   display.forEach(b => {
+    const catOpts = allCats.map(c=>`<option${c===b.chiTiet?' selected':''}>${c}</option>`).join('');
     html += `<tr>
       <td style="color:#6b7280;font-size:11px;text-align:center">${stt++}</td>
-      <td style="color:#111827">${b.ngay||''}</td>
-      <td style="color:#111827">${b.noiDung||''}</td>
-      <td><span class="badge ${catBadge[b.chiTiet]||'bgr'}">${b.chiTiet||''}</span></td>
-      <td class="bank-thu">${b.thu?fmt(b.thu):''}</td>
-      <td class="bank-chi">${b.chi?fmt(b.chi):''}</td>
+      <td class="cell-edit" onclick="editBankCell(this,'date','${b.id}','ngay','${b.ngay||''}')">
+        <span>${b.ngay||''}</span></td>
+      <td class="cell-edit" onclick="editBankCell(this,'text','${b.id}','noiDung',\`${(b.noiDung||'').replace(/`/g,"'")}\`)">
+        <span>${b.noiDung||''}</span></td>
+      <td class="cell-edit" onclick="editBankCellSelect(this,'${b.id}','chiTiet','${b.chiTiet||''}')">
+        <span class="badge ${catBadge[b.chiTiet]||'bgr'}">${b.chiTiet||''}</span></td>
+      <td class="bank-thu cell-edit" onclick="editBankCell(this,'number','${b.id}','thu',${b.thu||0})">
+        <span>${b.thu?fmt(b.thu):''}</span></td>
+      <td class="bank-chi cell-edit" onclick="editBankCell(this,'number','${b.id}','chi',${b.chi||0})">
+        <span>${b.chi?fmt(b.chi):''}</span></td>
       <td style="font-size:12px;color:#111827;font-weight:600;text-align:right">${fmt(soDuMap[b.id]??0)}</td>
       <td>${canEdit?`<button class="btn btn-danger btn-sm" onclick="deleteBankEntry('${b.id}')">✕</button>`:''}</td>
     </tr>`;
@@ -1163,10 +1202,155 @@ function renderBank() {
   document.getElementById('bank-table').innerHTML = html;
 }
 
-async function deleteBankEntry(id) {
+async async function deleteBankEntry(id) {
   if (!confirm('Xoá giao dịch này?')) return;
   await db.collection('bank').doc(id).delete();
   toast('Đã xoá','success');
+}
+
+// ===== DANH MUC MANAGEMENT =====
+const DEFAULT_THU = ['Tiền thuê','Phí dịch vụ','Tiền cọc','Lãi NH'];
+const DEFAULT_CHI = ['Chuyển CĐT','Dọn dẹp','Hoa hồng','Điện','Nước','Internet','Sửa chữa','Bể bơi','Thuế','Rác','Khác'];
+let customThu = [], customChi = [];
+
+function getAllCats() {
+  return [...DEFAULT_THU, ...customThu, ...DEFAULT_CHI, ...customChi];
+}
+function getAllThuCats() { return [...DEFAULT_THU, ...customThu]; }
+function getAllChiCats() { return [...DEFAULT_CHI, ...customChi]; }
+
+async function loadDanhmuc() {
+  try {
+    const doc = await db.collection('settings').doc('danhmuc').get();
+    if (doc.exists) {
+      customThu = doc.data().thu || [];
+      customChi = doc.data().chi || [];
+    }
+    rebuildFilterDropdown();
+  } catch(e) { console.log('loadDanhmuc:', e.message); }
+}
+
+function rebuildFilterDropdown() {
+  const sel = document.getElementById('bank-filter-cat');
+  if (!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Lọc chi tiết</option>';
+  getAllCats().forEach(c => {
+    const o = document.createElement('option');
+    o.value = o.textContent = c;
+    if (c === cur) o.selected = true;
+    sel.appendChild(o);
+  });
+}
+
+function openModalDanhmuc() {
+  renderDanhmucList();
+  openModal('modal-danhmuc');
+}
+
+function renderDanhmucList() {
+  const renderList = (listId, items, defaultItems, type) => {
+    const ul = document.getElementById(listId);
+    if (!ul) return;
+    ul.innerHTML = [...defaultItems.map(item =>
+      `<li style="display:flex;align-items:center;justify-content:space-between;padding:4px 8px;background:#f9fafb;border-radius:6px;font-size:12px">
+        <span>${item}</span><span style="color:#9ca3af;font-size:10px">mặc định</span></li>`
+    ), ...items.map((item, i) =>
+      `<li style="display:flex;align-items:center;justify-content:space-between;padding:4px 8px;background:#f0fdf4;border-radius:6px;font-size:12px">
+        <span>${item}</span>
+        <button onclick="deleteDanhmuc('${type}',${i})" style="border:none;background:none;color:#ef4444;cursor:pointer;font-size:13px;padding:0 4px">✕</button>
+      </li>`
+    )].join('');
+  };
+  renderList('dm-thu-list', customThu, DEFAULT_THU, 'thu');
+  renderList('dm-chi-list', customChi, DEFAULT_CHI, 'chi');
+}
+
+async function addDanhmuc(type) {
+  const input = document.getElementById(`dm-${type}-input`);
+  const val = input.value.trim();
+  if (!val) return;
+  if (getAllCats().includes(val)) { toast('Danh mục đã tồn tại','error'); return; }
+  if (type === 'thu') customThu.push(val);
+  else customChi.push(val);
+  input.value = '';
+  await saveDanhmuc();
+  renderDanhmucList();
+  rebuildFilterDropdown();
+  toast('Đã thêm danh mục','success');
+}
+
+async function deleteDanhmuc(type, index) {
+  if (type === 'thu') customThu.splice(index, 1);
+  else customChi.splice(index, 1);
+  await saveDanhmuc();
+  renderDanhmucList();
+  rebuildFilterDropdown();
+  toast('Đã xoá danh mục','success');
+}
+
+async function saveDanhmuc() {
+  await db.collection('settings').doc('danhmuc').set({ thu: customThu, chi: customChi }, { merge: true });
+}
+
+// ===== INLINE CELL EDITING =====
+function editBankCell(td, type, id, field, currentVal) {
+  if (td.querySelector('input')) return; // already editing
+  const span = td.querySelector('span');
+  const input = document.createElement('input');
+  input.type = type;
+  input.className = 'cell-input';
+  input.value = type === 'number' ? (currentVal || 0) : (currentVal || '');
+  if (type === 'number') input.style.textAlign = 'right';
+
+  td.innerHTML = '';
+  td.appendChild(input);
+  input.focus();
+  if (type !== 'date') input.select();
+
+  const save = async () => {
+    let val = input.value;
+    if (type === 'number') val = parseFloat(val) || 0;
+    if (field === 'ngay' && val) {
+      await db.collection('bank').doc(id).update({ ngay: val, thang: val.slice(0,7) });
+    } else if (val !== undefined) {
+      await db.collection('bank').doc(id).update({ [field]: val });
+    }
+    // renderBank will be called by onSnapshot
+  };
+
+  input.addEventListener('blur', save);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+    if (e.key === 'Escape') { renderBank(); }
+  });
+}
+
+function editBankCellSelect(td, id, field, currentVal) {
+  if (td.querySelector('select')) return;
+  const sel = document.createElement('select');
+  sel.className = 'cell-select';
+  getAllCats().forEach(c => {
+    const o = document.createElement('option');
+    o.value = o.textContent = c;
+    if (c === currentVal) o.selected = true;
+    sel.appendChild(o);
+  });
+
+  td.innerHTML = '';
+  td.appendChild(sel);
+  sel.focus();
+
+  const save = async () => {
+    const val = sel.value;
+    await db.collection('bank').doc(id).update({ [field]: val });
+  };
+
+  sel.addEventListener('change', () => { save(); sel.blur(); });
+  sel.addEventListener('blur', () => { /* onSnapshot will re-render */ });
+  sel.addEventListener('keydown', e => {
+    if (e.key === 'Escape') renderBank();
+  });
 }
 
 // ===== UPLOAD EXCEL =====
