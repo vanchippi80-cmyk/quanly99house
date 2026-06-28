@@ -1938,8 +1938,8 @@ function renderTaiSan() {
   document.getElementById('ts-th-action').textContent = canEdit?'Xử lý':'';
   let totNguyen=0, totDaKh=0, totConLai=0, totMonthly=0;
   const sorted = [...cache.taisan].sort((a,b)=>(a.ma||'').localeCompare(b.ma||''));
-  const filterTen = (document.getElementById('ts-filter-ten')?.value||'').toLowerCase();
-  const display = filterTen ? sorted.filter(ts=>(ts.ten||'').toLowerCase().includes(filterTen)) : sorted;
+  const filterTen = (document.getElementById('ts-filter-ten')?.value||'').normalize('NFC').toLowerCase();
+  const display = filterTen ? sorted.filter(ts=>(ts.ten||'').normalize('NFC').toLowerCase().includes(filterTen)) : sorted;
   const rows = display.map(ts=>{
     const kh = calcDepreciation(ts);
     totNguyen+=ts.soTien||0; totDaKh+=kh.elapsed; totConLai+=kh.remaining; totMonthly+=kh.monthly;
