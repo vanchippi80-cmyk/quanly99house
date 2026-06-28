@@ -1026,6 +1026,7 @@ function calcDepreciation(asset) {
 let bankYear = new Date().getFullYear();
 let bankSelectedMonth = new Date().toISOString().slice(0,7);
 let bankEditBuffer = [];
+let _bkSeq = 0;
 
 function getBankMonth() { return bankSelectedMonth; }
 
@@ -1067,7 +1068,7 @@ function changeBankYear(delta) {
 
 function addBankRow() {
   const thang = getBankMonth();
-  bankEditBuffer.push({ _tempId: Date.now()+Math.random(), ngay: thang+'-01', noiDung:'', chiTiet:'Tiền thuê', thu:0, chi:0 });
+  bankEditBuffer.push({ _tempId: ++_bkSeq, ngay: thang+'-01', noiDung:'', chiTiet: getAllThuCats()[0]||'Tiền thuê', thu:0, chi:0 });
   const s = document.getElementById('btn-bank-save'); if(s) s.style.display='inline-flex';
   renderBank();
 }
@@ -1210,8 +1211,8 @@ function renderBank() {
       <td><input type="date" value="${r.ngay||''}" onchange="updateBankRow(${r._tempId},'ngay',this.value)"></td>
       <td><input type="text" value="${r.noiDung||''}" placeholder="Nội dung giao dịch..." oninput="updateBankRow(${r._tempId},'noiDung',this.value)"></td>
       <td><select onchange="updateBankRow(${r._tempId},'chiTiet',this.value)">
-        <optgroup label="— THU —">${getAllThuCats().map(cc=>`<option ${r.chiTiet===cc?'selected':''}>${cc}</option>`).join('')}</optgroup>
-        <optgroup label="— CHI —">${getAllChiCats().map(cc=>`<option ${r.chiTiet===cc?'selected':''}>${cc}</option>`).join('')}</optgroup>
+        <optgroup label="— THU —">${getAllThuCats().map(cc=>`<option value="${cc}" ${r.chiTiet===cc?'selected':''}>${cc}</option>`).join('')}</optgroup>
+        <optgroup label="— CHI —">${getAllChiCats().map(cc=>`<option value="${cc}" ${r.chiTiet===cc?'selected':''}>${cc}</option>`).join('')}</optgroup>
       </select></td>
       <td><input type="number" value="${r.thu||''}" placeholder="0" oninput="updateBankRow(${r._tempId},'thu',this.value)" style="color:#059669"></td>
       <td><input type="number" value="${r.chi||''}" placeholder="0" oninput="updateBankRow(${r._tempId},'chi',this.value)" style="color:#dc2626"></td>
