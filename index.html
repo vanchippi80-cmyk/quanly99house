@@ -1935,7 +1935,8 @@ function renderTaiSan() {
   const canEdit = ['owner','manager'].includes(currentRole);
   document.getElementById('ts-th-action').textContent = canEdit?'Xử lý':'';
   let totNguyen=0, totDaKh=0, totConLai=0;
-  const rows = cache.taisan.map(ts=>{
+  const sorted = [...cache.taisan].sort((a,b)=>(a.ma||'').localeCompare(b.ma||''));
+  const rows = sorted.map(ts=>{
     const kh = calcDepreciation(ts);
     totNguyen+=ts.soTien||0; totDaKh+=kh.elapsed; totConLai+=kh.remaining;
     const pct = ts.soTien?Math.round(kh.elapsed/ts.soTien*100):0;
