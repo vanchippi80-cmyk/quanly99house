@@ -827,6 +827,7 @@ const NAV_CONFIG = {
 };
 
 // ===== AUTH =====
+firebase.auth().getRedirectResult().catch(err => console.error('Redirect error:', err));
 auth.onAuthStateChanged(async user => {
   if (!user) { showScreen('login'); return; }
   currentUser = user;
@@ -894,9 +895,14 @@ function loginGoogle() {
   const btn = document.querySelector('.btn-google');
   errEl.style.display = 'none';
   btn.disabled = true; btn.textContent = 'Đang đăng nhập...';
-  auth.signInWithPopup(provider)
-    .then(() => { btn.disabled = false; btn.innerHTML = '<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style="width:22px"> Đăng nhập bằng Google'; })
-    .catch(e => { btn.disabled = false; btn.innerHTML = '<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style="width:22px"> Đăng nhập bằng Google'; errEl.textContent='Lỗi: '+e.message; errEl.style.display='block'; });
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if (isMobile) {
+    auth.signInWithRedirect(provider);
+  } else {
+    auth.signInWithPopup(provider)
+      .then(() => { btn.disabled = false; btn.innerHTML = '<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style="width:22px"> Đăng nhập bằng Google'; })
+      .catch(e => { btn.disabled = false; btn.innerHTML = '<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style="width:22px"> Đăng nhập bằng Google'; errEl.textContent='Lỗi: '+e.message; errEl.style.display='block'; });
+  }
 }
 function logout() { auth.signOut(); }
 
