@@ -1375,6 +1375,26 @@ async function saveDanhmuc() {
 }
 
 // ===== INLINE CELL EDITING =====
+async function bankSaveFull(id, patch) {
+  const b = cache.bank.find(x => x.id === id);
+  if (!b) return;
+  Object.assign(b, patch);
+  renderBank();
+  await db.collection('bank').doc(id).set({
+    cosoId:       b.cosoId || selectedCosoId,
+    ngay:         b.ngay || '',
+    thang:        b.thang || '',
+    noiDung:      b.noiDung || '',
+    chiTiet:      b.chiTiet || '',
+    thu:          b.thu || 0,
+    chi:          b.chi || 0,
+    soDu:         b.soDu || 0,
+    phong:        b.phong || '',
+    importedFrom: b.importedFrom || 'manual',
+    createdBy:    b.createdBy || currentUser.uid,
+  });
+}
+
 function bankCellInput(td, id, field, type, currentVal) {
   const input = document.createElement('input');
   input.type = type;
@@ -1388,10 +1408,9 @@ function bankCellInput(td, id, field, type, currentVal) {
   const save = async () => {
     let val = input.value;
     if (type === 'number') val = parseFloat(val)||0;
-    const bkEntry = cache.bank.find(b => b.id === id);
-    const upd = { [field]: val, cosoId: bkEntry?.cosoId || selectedCosoId };
-    if (field === 'ngay' && val) upd.thang = val.slice(0,7);
-    await db.collection('bank').doc(id).set(upd, { merge: true });
+    const patch = { [field]: val };
+    if (field === 'ngay' && val) patch.thang = val.slice(0,7);
+    await bankSaveFull(id, patch);
   };
   input.addEventListener('blur', save);
   input.addEventListener('keydown', e => {
@@ -1411,11 +1430,7 @@ function bankCellSelect(td, id, field, currentVal) {
   });
   td.innerHTML = ''; td.appendChild(sel); sel.focus();
   sel.addEventListener('change', async () => {
-    const newVal = sel.value;
-    const bk = cache.bank.find(b => b.id === id);
-    if (bk) bk[field] = newVal;
-    renderBank();
-    await db.collection('bank').doc(id).set({ [field]: newVal, cosoId: bk?.cosoId || selectedCosoId }, { merge: true });
+    await bankSaveFull(id, { [field]: sel.value });
   });
   sel.addEventListener('keydown', e => { if (e.key === 'Escape') renderBank(); });
 }
