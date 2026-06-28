@@ -408,6 +408,7 @@ tr:hover td{background:#fafafa}
     <div class="tab-pane" id="tab-taisan">
       <div style="display:flex;gap:8px;margin-bottom:16px">
         <button class="btn btn-primary" id="btn-add-taisan" onclick="openModal('modal-taisan')">+ Thêm tài sản</button>
+        <button class="btn btn-secondary" id="btn-import-qlts" onclick="uploadQLTS()" style="display:none">📥 Import QLTS</button>
       </div>
       <div class="stats-grid" style="grid-template-columns:repeat(3,1fr)">
         <div class="stat-card blue"><div class="lbl">Tổng nguyên giá</div><div class="val" id="ts-nguyen">—</div></div>
@@ -416,7 +417,7 @@ tr:hover td{background:#fafafa}
       </div>
       <div class="card">
         <div class="card-header"><h3>Danh mục tài sản</h3></div>
-        <table><thead><tr><th>Mã TS</th><th>Tên tài sản</th><th>Phòng</th><th>Ngày mua</th><th>Nguyên giá</th><th>TG KH (tháng)</th><th>KH/tháng</th><th>Đã KH</th><th>Còn lại</th><th>Ghi chú</th><th id="ts-th-action"></th></tr></thead>
+        <table><thead><tr><th>Mã TS</th><th>Tên tài sản</th><th>Phòng</th><th>SL</th><th>Ngày mua</th><th>Nguyên giá</th><th>TG KH (tháng)</th><th>KH/tháng</th><th>Đã KH</th><th>Còn lại</th><th>Ghi chú</th><th id="ts-th-action"></th></tr></thead>
         <tbody id="taisan-table"></tbody></table>
       </div>
     </div>
@@ -670,6 +671,10 @@ tr:hover td{background:#fafafa}
       <div class="form-row">
         <div class="form-group"><label>Phòng</label><input type="text" id="ts-phong" placeholder="T1, Hành lang..."></div>
         <div class="form-group"><label>Đơn vị tính</label><input type="text" id="ts-dvt" value="Cái"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Số lượng</label><input type="number" id="ts-sl" value="1" min="1"></div>
+        <div class="form-group"></div>
       </div>
       <div class="form-row">
         <div class="form-group"><label>Ngày mua</label><input type="date" id="ts-ngaymua"></div>
@@ -1936,6 +1941,7 @@ function renderTaiSan() {
     const pct = ts.soTien?Math.round(kh.elapsed/ts.soTien*100):0;
     return `<tr>
       <td><b>${ts.ma||''}</b></td><td>${ts.ten}</td><td>${ts.phongSo||'—'}</td>
+      <td style="text-align:center">${ts.sl||1}</td>
       <td>${ts.ngayMua||''}</td><td>${fmt(ts.soTien)}</td>
       <td style="text-align:center">${ts.tgKh||'—'}</td>
       <td>${fmt(Math.round(kh.monthly))}/th</td>
@@ -1948,7 +1954,10 @@ function renderTaiSan() {
   document.getElementById('ts-nguyen').textContent = fmt(Math.round(totNguyen));
   document.getElementById('ts-dakh').textContent = fmt(Math.round(totDaKh));
   document.getElementById('ts-conlai').textContent = fmt(Math.round(totConLai));
-  document.getElementById('taisan-table').innerHTML = rows || `<tr><td colspan="11"><div class="empty"><div class="icon">🏷️</div><p>Chưa có tài sản nào</p></div></td></tr>`;
+  const canImport = currentRole==='owner';
+  const importBtn = document.getElementById('btn-import-qlts');
+  if (importBtn) importBtn.style.display = (canImport && cache.taisan.length===0) ? '' : 'none';
+  document.getElementById('taisan-table').innerHTML = rows || `<tr><td colspan="12"><div class="empty"><div class="icon">🏷️</div><p>Chưa có tài sản nào</p></div></td></tr>`;
 }
 function editTaiSan(id) {
   const ts = cache.taisan.find(t=>t.id===id); if(!ts) return;
@@ -1957,11 +1966,72 @@ function editTaiSan(id) {
     const el = document.getElementById('ts-'+k);
     if(el) el.value=ts[k==='phong'?'phongSo':k==='ngaymua'?'ngayMua':k==='noimua'?'noiMua':k==='sotien'?'soTien':k==='tgkh'?'tgKh':k==='diengiai'?'dienGiai':k]||'';
   });
+  const slEl = document.getElementById('ts-sl'); if(slEl) slEl.value = ts.sl||1;
   previewKhauHao(); openModal('modal-taisan');
 }
 async function deleteTaiSan(id) {
   if(!confirm('Xoá tài sản này?')) return;
   await db.collection('taisan').doc(id).delete(); toast('Đã xoá','success');
+}
+
+const QLTS_DATA = [
+  {ma:'TS001',ten:'Bàn ghế',phongSo:'P02',ngayMua:'2025-04-13',noiMua:'Nội thất Kiki',dienGiai:'Bộ bàn ăn gỗ sồi 6 ghế',dvt:'Bộ',sl:1,soTien:10000000,tgKh:24},
+  {ma:'TS002',ten:'Bàn ghế',phongSo:'P02',ngayMua:'2025-08-21',noiMua:'Nội thất Kiki',dienGiai:'Sofa',dvt:'Cái',sl:2,soTien:9000000,tgKh:24},
+  {ma:'TS003',ten:'Bàn ghế',phongSo:'P01',ngayMua:'2025-08-21',noiMua:'Nội thất Kiki',dienGiai:'Sofa',dvt:'Cái',sl:1,soTien:4500000,tgKh:24},
+  {ma:'TS004',ten:'Bếp từ',phongSo:'P02',ngayMua:'',noiMua:'Trang - HN',dienGiai:'Bếp từ đơn Media',dvt:'Cái',sl:2,soTien:1800000,tgKh:36},
+  {ma:'TS005',ten:'Bếp từ',phongSo:'P01',ngayMua:'',noiMua:'Trang - HN',dienGiai:'Bếp từ đơn Media',dvt:'Cái',sl:1,soTien:1800000,tgKh:36},
+  {ma:'TS006',ten:'Tủ lạnh',phongSo:'P01',ngayMua:'',noiMua:'LG (Tuyết)',dienGiai:'Tủ lạnh ngăn đá trên 266L màu bạc LTB26SVM',dvt:'Cái',sl:1,soTien:5848346,tgKh:36},
+  {ma:'TS007',ten:'Tủ lạnh',phongSo:'P02',ngayMua:'',noiMua:'LG (Tuyết)',dienGiai:'Tủ lạnh ngăn đá trên 266L màu bạc LTB26SVM',dvt:'Cái',sl:1,soTien:5848346,tgKh:36},
+  {ma:'TS008',ten:'Điều hòa',phongSo:'P01',ngayMua:'',noiMua:'LG (Tuyết)',dienGiai:'Điều hòa 12,000 BTU LG DUAL COOL Inverter AI Air 1 chiều',dvt:'Cái',sl:1,soTien:8549712,tgKh:36},
+  {ma:'TS009',ten:'Điều hòa',phongSo:'P02',ngayMua:'',noiMua:'LG (Tuyết)',dienGiai:'Điều hòa 12,000 BTU LG DUAL COOL Inverter AI Air 1 chiều',dvt:'Cái',sl:1,soTien:8549712,tgKh:36},
+  {ma:'TS010',ten:'Điều hòa',phongSo:'P01',ngayMua:'',noiMua:'LG (Tuyết)',dienGiai:'Điều hòa 9,000 BTU LG DUAL COOL Inverter AI Air 1 chiều',dvt:'Cái',sl:1,soTien:7589018,tgKh:36},
+  {ma:'TS011',ten:'Điều hòa',phongSo:'P02',ngayMua:'',noiMua:'LG (Tuyết)',dienGiai:'Điều hòa 9,000 BTU LG DUAL COOL Inverter AI Air 1 chiều',dvt:'Cái',sl:2,soTien:15178036,tgKh:36},
+  {ma:'TS012',ten:'Máy giặt',phongSo:'P01',ngayMua:'',noiMua:'LG (Tuyết)',dienGiai:'Máy giặt lồng ngang Inverter 10kg màu trắng',dvt:'Cái',sl:1,soTien:8096760,tgKh:36},
+  {ma:'TS013',ten:'Máy giặt',phongSo:'P02',ngayMua:'',noiMua:'LG (Tuyết)',dienGiai:'Máy giặt lồng ngang Inverter 10kg màu trắng',dvt:'Cái',sl:1,soTien:8096760,tgKh:36},
+  {ma:'TS014',ten:'Tivi',phongSo:'P01',ngayMua:'',noiMua:'LG (Tuyết)',dienGiai:'Tivi 50 inch',dvt:'Cái',sl:1,soTien:8996000,tgKh:36},
+  {ma:'TS015',ten:'Tivi',phongSo:'P02',ngayMua:'',noiMua:'LG (Tuyết)',dienGiai:'Tivi 50 inch',dvt:'Cái',sl:1,soTien:8996000,tgKh:36},
+  {ma:'TS016',ten:'Quạt',phongSo:'P01',ngayMua:'',noiMua:'Trang - HN',dienGiai:'Quạt trần',dvt:'Cái',sl:1,soTien:2800000,tgKh:36},
+  {ma:'TS017',ten:'Quạt',phongSo:'P02',ngayMua:'',noiMua:'Trang - HN',dienGiai:'Quạt trần',dvt:'Cái',sl:1,soTien:2800000,tgKh:36},
+  {ma:'TS018',ten:'Nội thất',phongSo:'P01',ngayMua:'2025-09-29',noiMua:'Nhất - ĐN',dienGiai:'Đệm 1,6m',dvt:'Cái',sl:2,soTien:5100000,tgKh:24},
+  {ma:'TS019',ten:'Nội thất',phongSo:'P02',ngayMua:'2025-09-29',noiMua:'Nhất - ĐN',dienGiai:'Đệm 1,6m',dvt:'Cái',sl:3,soTien:7650000,tgKh:24},
+  {ma:'TS020',ten:'Nội thất',phongSo:'P01',ngayMua:'2025-09-30',noiMua:'Baya',dienGiai:'Bộ chăn ga',dvt:'Bộ',sl:2,soTien:1160000,tgKh:24},
+  {ma:'TS021',ten:'Nội thất',phongSo:'P02',ngayMua:'2025-09-30',noiMua:'Baya',dienGiai:'Bộ chăn ga',dvt:'Bộ',sl:3,soTien:1740000,tgKh:24},
+  {ma:'TS022',ten:'Lò nướng',phongSo:'P01',ngayMua:'2025-11-02',noiMua:'ST điện máy',dienGiai:'Lò nướng Sanaki 25L',dvt:'Cái',sl:1,soTien:1319000,tgKh:24},
+  {ma:'TS023',ten:'Bàn ghế',phongSo:'P01',ngayMua:'2025-10-05',noiMua:'Chổi xể',dienGiai:'Bàn cafe',dvt:'Cái',sl:1,soTien:2599000,tgKh:24},
+  {ma:'TS024',ten:'Bàn ghế',phongSo:'P02',ngayMua:'2025-10-05',noiMua:'Chổi xể',dienGiai:'Bàn cafe',dvt:'Cái',sl:1,soTien:2599000,tgKh:24},
+  {ma:'TS025',ten:'Kệ tivi',phongSo:'P01',ngayMua:'2025-10-05',noiMua:'Chổi xể',dienGiai:'Kệ tivi',dvt:'Cái',sl:1,soTien:2999000,tgKh:24},
+  {ma:'TS026',ten:'Kệ tivi',phongSo:'P02',ngayMua:'2025-10-05',noiMua:'Chổi xể',dienGiai:'Kệ tivi',dvt:'Cái',sl:1,soTien:2999000,tgKh:24},
+  {ma:'TS027',ten:'Camera',phongSo:'KVC',ngayMua:'2025-10-09',noiMua:'Lê Gia',dienGiai:'Đầu ghi hình 4 kênh',dvt:'Cái',sl:1,soTien:950000,tgKh:36},
+  {ma:'TS028',ten:'Camera',phongSo:'KVC',ngayMua:'2025-10-09',noiMua:'Lê Gia',dienGiai:'Ổ cứng 500 GB',dvt:'Cái',sl:1,soTien:550000,tgKh:36},
+  {ma:'TS029',ten:'Camera',phongSo:'KVC',ngayMua:'2025-10-09',noiMua:'Lê Gia',dienGiai:'Camera ngoài trời',dvt:'Cái',sl:2,soTien:1300000,tgKh:36},
+  {ma:'TS030',ten:'Camera',phongSo:'KVC',ngayMua:'2025-10-09',noiMua:'Lê Gia',dienGiai:'Switch',dvt:'Cái',sl:1,soTien:420000,tgKh:36},
+  {ma:'TS031',ten:'Camera',phongSo:'KVC',ngayMua:'2025-10-09',noiMua:'Lê Gia',dienGiai:'Tủ đầu ghi + ổ cắm',dvt:'Cái',sl:1,soTien:500000,tgKh:36},
+  {ma:'TS032',ten:'Camera',phongSo:'KVC',ngayMua:'2025-10-09',noiMua:'Lê Gia',dienGiai:'Nhân công',dvt:'Cái',sl:1,soTien:1200000,tgKh:36},
+  {ma:'TS033',ten:'Tủ giày',phongSo:'P01',ngayMua:'2025-10-30',noiMua:'Edvic Home (Trung)',dienGiai:'Tủ giày',dvt:'Cái',sl:1,soTien:4100000,tgKh:24},
+  {ma:'TS034',ten:'Tủ giày',phongSo:'P02',ngayMua:'2025-10-30',noiMua:'Edvic Home (Trung)',dienGiai:'Tủ giày',dvt:'Cái',sl:1,soTien:4100000,tgKh:24},
+  {ma:'TS035',ten:'Giường',phongSo:'P01',ngayMua:'2025-10-30',noiMua:'Edvic Home (Trung)',dienGiai:'Giường 1,6m',dvt:'Cái',sl:2,soTien:11580000,tgKh:24},
+  {ma:'TS036',ten:'Tủ',phongSo:'P01',ngayMua:'2025-10-30',noiMua:'Edvic Home (Trung)',dienGiai:'Tủ ngăn kéo',dvt:'Cái',sl:1,soTien:4500000,tgKh:24},
+  {ma:'TS037',ten:'Tủ',phongSo:'P01',ngayMua:'2025-10-30',noiMua:'Edvic Home (Trung)',dienGiai:'Tủ quần áo 1,2m*2m',dvt:'Cái',sl:1,soTien:6840000,tgKh:24},
+  {ma:'TS038',ten:'Giường',phongSo:'P02',ngayMua:'2025-10-30',noiMua:'Edvic Home (Trung)',dienGiai:'Giường 1,6m',dvt:'Cái',sl:3,soTien:17370000,tgKh:24},
+  {ma:'TS039',ten:'Tap',phongSo:'P02',ngayMua:'2025-10-30',noiMua:'Edvic Home (Trung)',dienGiai:'Tap đầu giường',dvt:'Cái',sl:2,soTien:5400000,tgKh:24},
+  {ma:'TS040',ten:'Tủ',phongSo:'P02',ngayMua:'2025-10-30',noiMua:'Edvic Home (Trung)',dienGiai:'Tủ quần áo 1,2m*2m',dvt:'Cái',sl:3,soTien:20520000,tgKh:24},
+  {ma:'TS041',ten:'Ghế',phongSo:'KVC',ngayMua:'2025-12-21',noiMua:'shoppee',dienGiai:'Ghế bể bơi',dvt:'Cái',sl:1,soTien:1100000,tgKh:24},
+];
+
+async function uploadQLTS() {
+  const coso = allCosos.find(c=>{
+    const t = c.ten.toLowerCase().normalize('NFC');
+    return t.includes('hội an') || t.includes('hoi an');
+  });
+  if (!coso) { toast('Không tìm thấy cơ sở Hội An','error'); return; }
+  if (!confirm(`Import 41 tài sản vào "${coso.ten}"?`)) return;
+  const batch = db.batch();
+  QLTS_DATA.forEach(d=>{
+    const ref = db.collection('taisan').doc();
+    batch.set(ref, {...d, cosoId:coso.id, createdBy:currentUser.uid, createdAt:FieldValue.serverTimestamp()});
+  });
+  await batch.commit();
+  toast('Đã import 41 tài sản','success');
 }
 
 // ===== CO SO =====
@@ -2107,7 +2177,8 @@ async function saveTaiSan() {
   const data = {
     cosoId:selectedCosoId, ma:document.getElementById('ts-ma').value,
     ten, phongSo:document.getElementById('ts-phong').value,
-    dvt:document.getElementById('ts-dvt').value, ngayMua:document.getElementById('ts-ngaymua').value,
+    dvt:document.getElementById('ts-dvt').value, sl:Number(document.getElementById('ts-sl').value)||1,
+    ngayMua:document.getElementById('ts-ngaymua').value,
     noiMua:document.getElementById('ts-noimua').value,
     soTien:Number(document.getElementById('ts-sotien').value)||0,
     tgKh:Number(document.getElementById('ts-tgkh').value)||0,
