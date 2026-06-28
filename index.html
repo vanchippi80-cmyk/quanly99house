@@ -1210,8 +1210,8 @@ function renderBank() {
       <td><input type="date" value="${r.ngay||''}" onchange="updateBankRow(${r._tempId},'ngay',this.value)"></td>
       <td><input type="text" value="${r.noiDung||''}" placeholder="Nội dung giao dịch..." oninput="updateBankRow(${r._tempId},'noiDung',this.value)"></td>
       <td><select onchange="updateBankRow(${r._tempId},'chiTiet',this.value)">
-        <optgroup label="— THU —">${CAT_THU.map(cc=>`<option ${r.chiTiet===cc?'selected':''}>${cc}</option>`).join('')}</optgroup>
-        <optgroup label="— CHI —">${CAT_CHI.map(cc=>`<option ${r.chiTiet===cc?'selected':''}>${cc}</option>`).join('')}</optgroup>
+        <optgroup label="— THU —">${getAllThuCats().map(cc=>`<option ${r.chiTiet===cc?'selected':''}>${cc}</option>`).join('')}</optgroup>
+        <optgroup label="— CHI —">${getAllChiCats().map(cc=>`<option ${r.chiTiet===cc?'selected':''}>${cc}</option>`).join('')}</optgroup>
       </select></td>
       <td><input type="number" value="${r.thu||''}" placeholder="0" oninput="updateBankRow(${r._tempId},'thu',this.value)" style="color:#059669"></td>
       <td><input type="number" value="${r.chi||''}" placeholder="0" oninput="updateBankRow(${r._tempId},'chi',this.value)" style="color:#dc2626"></td>
@@ -2128,7 +2128,11 @@ function openModal(id) {
     document.getElementById('bk-ngay').value=new Date().toISOString().split('T')[0];
     document.getElementById('bk-phong').value=''; document.getElementById('bk-noidung').value='';
     document.getElementById('bk-thu').value=''; document.getElementById('bk-chi').value='';
-    document.getElementById('bk-chitiet').value='Tiền thuê';
+    const bkSel = document.getElementById('bk-chitiet');
+    bkSel.innerHTML =
+      `<optgroup label="— THU —">${getAllThuCats().map(c=>`<option>${c}</option>`).join('')}</optgroup>` +
+      `<optgroup label="— CHI —">${getAllChiCats().map(c=>`<option>${c}</option>`).join('')}</optgroup>`;
+    bkSel.value = getAllThuCats()[0] || 'Tiền thuê';
   }
   if (id==='modal-hoahong') {
     const today=new Date().toISOString().split('T')[0];
