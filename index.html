@@ -1679,7 +1679,9 @@ function renderKQKD() {
     const tienThue = bkCat('Tiền thuê');
     const phiDV    = bkCat('Phí dịch vụ');
     const laiNH    = bkCat('Lãi NH');
-    const tienCoc  = bkCat('Tiền cọc');
+    const tienCocT = bk.reduce((s,b)=>s+(norm(b.chiTiet)==='Tiền cọc'&&(b.thu||0)>0?b.thu:0),0);
+    const tienCocC = bk.reduce((s,b)=>s+(norm(b.chiTiet)==='Tiền cọc'&&(b.chi||0)>0?b.chi:0),0);
+    const tienCoc = tienCocT - tienCocC;
     const thuKhac  = bkCat('Khác Thu') + bkCat('Thu khác');
     const totalThu = bk.reduce((s,b)=>s+((b.thu||0)>0?b.thu:0),0);
     const doanhThu = tienThue + phiDV + laiNH;
@@ -1771,7 +1773,7 @@ function renderKQKD() {
   </tr>`;
   CHI_ROWS.forEach(k=>{
     const vals = mData.map(d=>d.chi[k]||0);
-    if (!vals.some(v=>v>0)) return;
+    if (!vals.some(v=>v!==0)) return;
     t += `<tr>
       <td style="padding:3px 12px 3px 26px;font-size:11px;color:#374151;position:sticky;left:0;background:#fff;z-index:1;border-bottom:1px solid #f3f4f6;white-space:nowrap">${k}</td>
       ${vals.map(v=>td(fmtNet(v))).join('')}
