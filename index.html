@@ -1657,7 +1657,10 @@ function renderKQKD() {
     const lastBk = bk[bk.length-1];
     const soDuCuoi = lastBk ? (soDuMap[lastBk.id]??soDuDau) : soDuDau;
 
-    return {m, thangKey, thu, totalThu, doanhThu, chi, totalChi, cdt, soDuDau, soDuCuoi, loiNhuan: doanhThu-totalChi};
+    const tienCoc = bk.reduce((s,b)=>s+((b.chiTiet||'').trim()==='Tiền cọc'&&(b.thu||0)>0?(b.thu):0),0);
+    const thuKhac = totalThu - doanhThu - tienCoc;
+
+    return {m, thangKey, thu, totalThu, doanhThu, tienCoc, thuKhac, chi, totalChi, cdt, soDuDau, soDuCuoi, loiNhuan: doanhThu-totalChi};
   });
 
   // Totals helper
@@ -1721,6 +1724,22 @@ function renderKQKD() {
       ${td(f0(vals.reduce((s,v)=>s+v,0)),'font-weight:600')}
     </tr>`;
   });
+  const cocVals = mData.map(d=>d.tienCoc||0);
+  if (cocVals.some(v=>v>0)) {
+    t += `<tr>
+      <td style="padding:3px 12px 3px 26px;font-size:11px;color:#374151;position:sticky;left:0;background:#fff;z-index:1;border-bottom:1px solid #f3f4f6;white-space:nowrap">Tiền cọc</td>
+      ${cocVals.map(v=>td(f0(v))).join('')}
+      ${td(f0(cocVals.reduce((s,v)=>s+v,0)),'font-weight:600')}
+    </tr>`;
+  }
+  const khacVals = mData.map(d=>d.thuKhac||0);
+  if (khacVals.some(v=>v>0)) {
+    t += `<tr>
+      <td style="padding:3px 12px 3px 26px;font-size:11px;color:#374151;position:sticky;left:0;background:#fff;z-index:1;border-bottom:1px solid #f3f4f6;white-space:nowrap">Thu khác</td>
+      ${khacVals.map(v=>td(f0(v))).join('')}
+      ${td(f0(khacVals.reduce((s,v)=>s+v,0)),'font-weight:600')}
+    </tr>`;
+  }
 
   // ─── Chi phí ───
   t += `<tr style="background:#fee2e2">
