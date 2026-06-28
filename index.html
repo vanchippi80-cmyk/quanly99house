@@ -417,6 +417,7 @@ tr:hover td{background:#fafafa}
       </div>
       <div class="card">
         <div class="card-header"><h3>Danh mục tài sản</h3></div>
+        <input type="text" id="ts-filter-ten" placeholder="🔍 Lọc theo tên tài sản..." oninput="renderTaiSan()" style="margin:8px 0 12px;padding:7px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;width:260px">
         <table><thead><tr><th>Mã TS</th><th>Tên tài sản</th><th>Vị trí</th><th>SL</th><th>Nhà cc</th><th>Diễn giải</th><th>Ngày mua</th><th>Giá mua</th><th>TG KH (tháng)</th><th>KH/tháng</th><th>Đã KH</th><th>Còn lại</th><th>Ghi chú</th><th id="ts-th-action"></th></tr></thead>
         <tbody id="taisan-table"></tbody></table>
       </div>
@@ -1936,7 +1937,9 @@ function renderTaiSan() {
   document.getElementById('ts-th-action').textContent = canEdit?'Xử lý':'';
   let totNguyen=0, totDaKh=0, totConLai=0;
   const sorted = [...cache.taisan].sort((a,b)=>(a.ma||'').localeCompare(b.ma||''));
-  const rows = sorted.map(ts=>{
+  const filterTen = (document.getElementById('ts-filter-ten')?.value||'').toLowerCase();
+  const display = filterTen ? sorted.filter(ts=>(ts.ten||'').toLowerCase().includes(filterTen)) : sorted;
+  const rows = display.map(ts=>{
     const kh = calcDepreciation(ts);
     totNguyen+=ts.soTien||0; totDaKh+=kh.elapsed; totConLai+=kh.remaining;
     const pct = ts.soTien?Math.round(kh.elapsed/ts.soTien*100):0;
