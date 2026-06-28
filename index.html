@@ -409,6 +409,7 @@ tr:hover td{background:#fafafa}
       <div style="display:flex;gap:8px;margin-bottom:16px;align-items:center;flex-wrap:wrap">
         <button class="btn btn-primary" id="btn-add-taisan" onclick="openModal('modal-taisan')">+ Thêm tài sản</button>
         <button class="btn btn-secondary" id="btn-import-qlts" onclick="uploadQLTS()" style="display:none">📥 Import QLTS</button>
+        <button class="btn btn-secondary" id="btn-import-nt" onclick="uploadQLTS_NT()" style="display:none">📥 Import NT</button>
         <input type="text" id="ts-filter-ten" placeholder="🔍 Lọc theo tên tài sản..." oninput="renderTaiSan()" style="padding:7px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;width:240px">
       </div>
       <div class="stats-grid" style="grid-template-columns:repeat(3,1fr)">
@@ -1975,6 +1976,8 @@ function renderTaiSan() {
   const canImport = currentRole==='owner';
   const importBtn = document.getElementById('btn-import-qlts');
   if (importBtn) importBtn.style.display = canImport ? '' : 'none';
+  const importNtBtn = document.getElementById('btn-import-nt');
+  if (importNtBtn) importNtBtn.style.display = canImport ? '' : 'none';
   document.getElementById('taisan-table').innerHTML = rows || `<tr><td colspan="14"><div class="empty"><div class="icon">🏷️</div><p>Chưa có tài sản nào</p></div></td></tr>`;
   document.getElementById('taisan-tfoot').innerHTML = display.length ? `<tr style="background:#f0fdf4;font-weight:700">
     <td colspan="7" style="padding:6px 12px">Tổng cộng (${display.length} tài sản)</td>
@@ -2059,6 +2062,110 @@ async function uploadQLTS() {
   });
   await batch.commit();
   toast('Đã import 41 tài sản','success');
+}
+
+const QLTS_NT = [
+  {ma:'TB01',ten:'Bình nóng lạnh',phongSo:'P101',ngayMua:'2025-02-13',noiMua:'Phúc Đại Phát',dienGiai:'Bình nóng lạnh',dvt:'Cái',sl:1,soTien:1940000,tgKh:36},
+  {ma:'MG01',ten:'Máy giặt',phongSo:'P101',ngayMua:'2025-02-14',noiMua:'LG (Tuyết)',dienGiai:'Máy giặt lồng ngang inverter 9kg FB1209S6W',dvt:'Cái',sl:1,soTien:5222160,tgKh:36},
+  {ma:'TL01',ten:'Tủ lạnh',phongSo:'P101',ngayMua:'2025-03-14',noiMua:'LG (Tuyết)',dienGiai:'Tủ lạnh ngăn đá trên Essence 217L màu bạc',dvt:'Cái',sl:1,soTien:5867500,tgKh:36},
+  {ma:'NT01',ten:'Ghế sofa',phongSo:'P101',ngayMua:'2025-04-05',noiMua:'Chổi xể',dienGiai:'Sofa',dvt:'Cái',sl:1,soTien:3390000,tgKh:24},
+  {ma:'DH01',ten:'Điều hòa',phongSo:'P101',ngayMua:'2025-02-13',noiMua:'LG (Tuyết)',dienGiai:'Điều hòa LG inverter 1 chiều 9,000 BTU V10WIN1',dvt:'Cái',sl:1,soTien:5877448,tgKh:36},
+  {ma:'NT02',ten:'Bàn ghế',phongSo:'P101',ngayMua:'2025-04-05',noiMua:'Chổi xể',dienGiai:'Bàn ghế ăn 2 ghế',dvt:'Cái',sl:1,soTien:1300000,tgKh:24},
+  {ma:'',ten:'Phơi đồ',phongSo:'P101',ngayMua:'2025-05-20',noiMua:'',dienGiai:'Cây phơi đồ',dvt:'Cái',sl:1,soTien:290000,tgKh:12},
+  {ma:'TB02',ten:'Quạt',phongSo:'P101',ngayMua:'2025-03-05',noiMua:'',dienGiai:'Quạt đứng Media',dvt:'Cái',sl:1,soTien:0,tgKh:0},
+  {ma:'TB03',ten:'Bếp từ',phongSo:'P101',ngayMua:'',noiMua:'',dienGiai:'Bếp từ đơn Media',dvt:'Cái',sl:1,soTien:1800000,tgKh:36},
+  {ma:'NT11',ten:'Đệm',phongSo:'P101',ngayMua:'2025-04-26',noiMua:'Tái sử dụng',dienGiai:'Đệm 1.8m+ bọc',dvt:'Cái',sl:1,soTien:0,tgKh:0},
+  {ma:'',ten:'Wifi',phongSo:'P101',ngayMua:'',noiMua:'',dienGiai:'Viettel',dvt:'Cái',sl:1,soTien:0,tgKh:0},
+  {ma:'TB04',ten:'Bình nóng lạnh',phongSo:'P102',ngayMua:'2025-02-13',noiMua:'Phúc Đại Phát',dienGiai:'Bình nóng lạnh',dvt:'Cái',sl:1,soTien:1940000,tgKh:36},
+  {ma:'MG02',ten:'Máy giặt',phongSo:'P102',ngayMua:'2025-02-14',noiMua:'LG (Tuyết)',dienGiai:'Máy giặt lồng ngang inverter 9kg FB1209S6W',dvt:'Cái',sl:1,soTien:5222160,tgKh:36},
+  {ma:'TB05',ten:'Khóa cửa',phongSo:'P102',ngayMua:'2025-03-05',noiMua:'',dienGiai:'Khóa từ',dvt:'Cái',sl:1,soTien:825000,tgKh:36},
+  {ma:'TL02',ten:'Tủ lạnh',phongSo:'P102',ngayMua:'2025-03-14',noiMua:'LG (Tuyết)',dienGiai:'Tủ lạnh ngăn đá trên Essence 217L màu bạc',dvt:'Cái',sl:1,soTien:5867500,tgKh:36},
+  {ma:'NT03',ten:'Ghế sofa',phongSo:'P102',ngayMua:'2025-04-05',noiMua:'Chổi xể',dienGiai:'Sofa',dvt:'Cái',sl:1,soTien:3390000,tgKh:24},
+  {ma:'NT04',ten:'Bàn ghế',phongSo:'P102',ngayMua:'2025-04-05',noiMua:'Chổi xể',dienGiai:'Bàn ăn mở rộng 4 ghế',dvt:'Cái',sl:1,soTien:3450000,tgKh:24},
+  {ma:'DH02',ten:'Điều hòa',phongSo:'P102',ngayMua:'2025-02-13',noiMua:'LG (Tuyết)',dienGiai:'Điều hòa LG inverter 1 chiều 9,000 BTU V10WIN1',dvt:'Cái',sl:1,soTien:5877448,tgKh:36},
+  {ma:'DH03',ten:'Điều hòa',phongSo:'P102',ngayMua:'2025-03-14',noiMua:'LG (Tuyết)',dienGiai:'Điều hòa LG inverter 1 chiều 9,000 IEC09M1',dvt:'Cái',sl:1,soTien:6996412,tgKh:36},
+  {ma:'',ten:'Phơi đồ',phongSo:'P102',ngayMua:'2025-05-20',noiMua:'',dienGiai:'Cây phơi đồ',dvt:'Cái',sl:1,soTien:290000,tgKh:12},
+  {ma:'TB06',ten:'Quạt',phongSo:'P102',ngayMua:'2025-03-05',noiMua:'',dienGiai:'Quạt đứng Media',dvt:'Cái',sl:1,soTien:0,tgKh:0},
+  {ma:'TB07',ten:'Bếp từ',phongSo:'P102',ngayMua:'',noiMua:'',dienGiai:'Bếp từ đơn Media',dvt:'Cái',sl:1,soTien:1800000,tgKh:36},
+  {ma:'NT12',ten:'Đệm',phongSo:'P102',ngayMua:'2025-04-26',noiMua:'',dienGiai:'Đệm 1.6m x 2m + bọc',dvt:'Cái',sl:1,soTien:2550000,tgKh:24},
+  {ma:'NT13',ten:'Đệm',phongSo:'P102',ngayMua:'2025-04-26',noiMua:'',dienGiai:'Đệm 1.6m x 1.9m + bọc',dvt:'Cái',sl:1,soTien:2950000,tgKh:24},
+  {ma:'',ten:'Wifi',phongSo:'P102',ngayMua:'',noiMua:'',dienGiai:'Viettel',dvt:'Cái',sl:1,soTien:0,tgKh:0},
+  {ma:'TB08',ten:'Bình nóng lạnh',phongSo:'P201',ngayMua:'2025-02-13',noiMua:'Phúc Đại Phát',dienGiai:'Bình nóng lạnh',dvt:'Cái',sl:1,soTien:1940000,tgKh:36},
+  {ma:'MG03',ten:'Máy giặt',phongSo:'P201',ngayMua:'2025-02-14',noiMua:'LG (Tuyết)',dienGiai:'Máy giặt lồng ngang inverter 9kg FB1209S6W',dvt:'Cái',sl:1,soTien:5222160,tgKh:36},
+  {ma:'TB09',ten:'Khóa cửa',phongSo:'P201',ngayMua:'2025-03-05',noiMua:'',dienGiai:'Khóa từ',dvt:'Cái',sl:1,soTien:825000,tgKh:36},
+  {ma:'TL03',ten:'Tủ lạnh',phongSo:'P201',ngayMua:'2025-03-14',noiMua:'LG (Tuyết)',dienGiai:'Tủ lạnh ngăn đá trên Essence 217L màu bạc',dvt:'Cái',sl:1,soTien:5867500,tgKh:36},
+  {ma:'NT05',ten:'Ghế sofa',phongSo:'P201',ngayMua:'2025-04-05',noiMua:'Chổi xể',dienGiai:'Sofa',dvt:'Cái',sl:1,soTien:3390000,tgKh:24},
+  {ma:'NT06',ten:'Bàn ghế',phongSo:'P201',ngayMua:'2025-04-05',noiMua:'Chổi xể',dienGiai:'Bàn ăn mở rộng 4 ghế',dvt:'Cái',sl:1,soTien:3450000,tgKh:24},
+  {ma:'DH04',ten:'Điều hòa',phongSo:'P201',ngayMua:'2025-02-13',noiMua:'LG (Tuyết)',dienGiai:'Điều hòa LG inverter 1 chiều 9,000 BTU V10WIN1',dvt:'Cái',sl:1,soTien:5877448,tgKh:36},
+  {ma:'DH05',ten:'Điều hòa',phongSo:'P201',ngayMua:'2025-03-14',noiMua:'LG (Tuyết)',dienGiai:'Điều hòa LG inverter 1 chiều 9,000 IEC09M1',dvt:'Cái',sl:1,soTien:6996412,tgKh:36},
+  {ma:'',ten:'Phơi đồ',phongSo:'P201',ngayMua:'2025-05-20',noiMua:'',dienGiai:'Cây phơi đồ',dvt:'Cái',sl:1,soTien:290000,tgKh:12},
+  {ma:'TB10',ten:'Quạt',phongSo:'P201',ngayMua:'2025-03-05',noiMua:'',dienGiai:'Quạt đứng Media',dvt:'Cái',sl:1,soTien:0,tgKh:0},
+  {ma:'TB11',ten:'Bếp từ',phongSo:'P201',ngayMua:'',noiMua:'',dienGiai:'Bếp từ đơn Media',dvt:'Cái',sl:1,soTien:1800000,tgKh:36},
+  {ma:'NT14',ten:'Đệm',phongSo:'P201',ngayMua:'2025-04-26',noiMua:'',dienGiai:'Đệm 1.6m + bọc',dvt:'Cái',sl:1,soTien:2550000,tgKh:24},
+  {ma:'',ten:'Wifi',phongSo:'P201',ngayMua:'',noiMua:'',dienGiai:'Viettel',dvt:'Cái',sl:1,soTien:0,tgKh:0},
+  {ma:'TB12',ten:'Bình nóng lạnh',phongSo:'P202',ngayMua:'2025-04-26',noiMua:'Tái sử dụng',dienGiai:'Bình nóng lạnh',dvt:'Cái',sl:1,soTien:0,tgKh:0},
+  {ma:'DH06',ten:'Điều hòa',phongSo:'P202',ngayMua:'2025-03-14',noiMua:'LG (Tuyết)',dienGiai:'Điều hòa LG inverter 1 chiều 9,000 IEC09M1',dvt:'Cái',sl:1,soTien:6996412,tgKh:36},
+  {ma:'MG04',ten:'Máy giặt',phongSo:'P202',ngayMua:'2025-02-14',noiMua:'LG (Tuyết)',dienGiai:'Máy giặt lồng ngang inverter 9kg FB1209S6W',dvt:'Cái',sl:1,soTien:5222160,tgKh:36},
+  {ma:'TB13',ten:'Khóa cửa',phongSo:'P202',ngayMua:'2025-03-05',noiMua:'',dienGiai:'Khóa từ',dvt:'Cái',sl:1,soTien:825000,tgKh:36},
+  {ma:'TL04',ten:'Tủ lạnh',phongSo:'P202',ngayMua:'2025-03-14',noiMua:'LG (Tuyết)',dienGiai:'Tủ lạnh ngăn đá trên Essence 217L màu bạc',dvt:'Cái',sl:1,soTien:5867500,tgKh:36},
+  {ma:'NT07',ten:'Bàn ghế',phongSo:'P202',ngayMua:'2025-04-05',noiMua:'Chổi xể',dienGiai:'Bàn ghế ăn 2 ghế',dvt:'Cái',sl:1,soTien:1300000,tgKh:24},
+  {ma:'',ten:'Phơi đồ',phongSo:'P202',ngayMua:'2025-05-20',noiMua:'',dienGiai:'Cây phơi đồ',dvt:'Cái',sl:1,soTien:290000,tgKh:12},
+  {ma:'TB14',ten:'Quạt',phongSo:'P202',ngayMua:'2025-03-05',noiMua:'',dienGiai:'Quạt đứng Media',dvt:'Cái',sl:1,soTien:0,tgKh:0},
+  {ma:'TB15',ten:'Bếp từ',phongSo:'P202',ngayMua:'',noiMua:'',dienGiai:'Bếp từ đơn Media',dvt:'Cái',sl:1,soTien:1800000,tgKh:36},
+  {ma:'NT15',ten:'Đệm',phongSo:'P202',ngayMua:'2025-04-26',noiMua:'',dienGiai:'Đệm 1.6m + bọc',dvt:'Cái',sl:1,soTien:2550000,tgKh:24},
+  {ma:'',ten:'Wifi',phongSo:'P202',ngayMua:'',noiMua:'',dienGiai:'Viettel',dvt:'Cái',sl:1,soTien:0,tgKh:0},
+  {ma:'TB16',ten:'Bình nóng lạnh',phongSo:'P203',ngayMua:'2025-04-26',noiMua:'Tái sử dụng',dienGiai:'Bình nóng lạnh',dvt:'Cái',sl:1,soTien:0,tgKh:0},
+  {ma:'DH07',ten:'Điều hòa',phongSo:'P203',ngayMua:'2025-02-13',noiMua:'LG (Tuyết)',dienGiai:'Điều hòa LG inverter 1 chiều 9,000 BTU V10WIN1',dvt:'Cái',sl:1,soTien:5877448,tgKh:36},
+  {ma:'MG05',ten:'Máy giặt',phongSo:'P203',ngayMua:'2025-02-14',noiMua:'LG (Tuyết)',dienGiai:'Máy giặt lồng ngang inverter 9kg FB1209S6W',dvt:'Cái',sl:1,soTien:5222160,tgKh:36},
+  {ma:'TB17',ten:'Khóa cửa',phongSo:'P203',ngayMua:'2025-03-05',noiMua:'',dienGiai:'Khóa từ',dvt:'Cái',sl:1,soTien:825000,tgKh:36},
+  {ma:'TL05',ten:'Tủ lạnh',phongSo:'P203',ngayMua:'2025-03-14',noiMua:'LG (Tuyết)',dienGiai:'Tủ lạnh ngăn đá trên Essence 217L màu bạc',dvt:'Cái',sl:1,soTien:5867500,tgKh:36},
+  {ma:'NT08',ten:'Ghế sofa',phongSo:'P203',ngayMua:'2025-04-05',noiMua:'Chổi xể',dienGiai:'Sofa',dvt:'Cái',sl:1,soTien:3390000,tgKh:24},
+  {ma:'NT09',ten:'Bàn ghế',phongSo:'P203',ngayMua:'2025-04-05',noiMua:'Chổi xể',dienGiai:'Bàn ghế ăn 2 ghế',dvt:'Cái',sl:1,soTien:1300000,tgKh:24},
+  {ma:'',ten:'Phơi đồ',phongSo:'P203',ngayMua:'2025-05-20',noiMua:'',dienGiai:'Cây phơi đồ',dvt:'Cái',sl:1,soTien:290000,tgKh:12},
+  {ma:'TB18',ten:'Quạt',phongSo:'P203',ngayMua:'2025-03-05',noiMua:'',dienGiai:'Quạt đứng Media',dvt:'Cái',sl:1,soTien:0,tgKh:0},
+  {ma:'TB19',ten:'Bếp từ',phongSo:'P203',ngayMua:'',noiMua:'',dienGiai:'Bếp từ đơn Media',dvt:'Cái',sl:1,soTien:1800000,tgKh:36},
+  {ma:'NT16',ten:'Đệm',phongSo:'P203',ngayMua:'2025-04-26',noiMua:'',dienGiai:'Đệm 1.6m + bọc',dvt:'Cái',sl:1,soTien:2550000,tgKh:24},
+  {ma:'',ten:'Wifi',phongSo:'P203',ngayMua:'',noiMua:'',dienGiai:'Viettel',dvt:'Cái',sl:1,soTien:0,tgKh:0},
+  {ma:'TB20',ten:'Máy bơm',phongSo:'KVC',ngayMua:'2024-12-01',noiMua:'',dienGiai:'Máy bơm',dvt:'Cái',sl:1,soTien:5900000,tgKh:36},
+  {ma:'TB21',ten:'Khóa cửa',phongSo:'KVC',ngayMua:'2025-03-05',noiMua:'',dienGiai:'Khóa từ cửa chính',dvt:'Cái',sl:1,soTien:825000,tgKh:36},
+  {ma:'Cam',ten:'Camera',phongSo:'KVC',ngayMua:'2025-03-26',noiMua:'',dienGiai:'Camera',dvt:'Cái',sl:6,soTien:710000,tgKh:36},
+  {ma:'Cam',ten:'Camera',phongSo:'KVC',ngayMua:'2025-03-26',noiMua:'',dienGiai:'Đầu ghi hình',dvt:'Cái',sl:1,soTien:1850000,tgKh:36},
+  {ma:'Cam',ten:'Camera',phongSo:'KVC',ngayMua:'2025-03-26',noiMua:'',dienGiai:'Switch 10 cổng',dvt:'Cái',sl:1,soTien:950000,tgKh:36},
+  {ma:'Cam',ten:'Camera',phongSo:'KVC',ngayMua:'2025-03-26',noiMua:'',dienGiai:'Switch 5 cổng',dvt:'Cái',sl:1,soTien:450000,tgKh:36},
+  {ma:'Cam',ten:'Camera',phongSo:'KVC',ngayMua:'2025-03-26',noiMua:'',dienGiai:'Tủ đầu ghi',dvt:'Cái',sl:1,soTien:420000,tgKh:36},
+  {ma:'Cam',ten:'Camera',phongSo:'KVC',ngayMua:'2025-03-26',noiMua:'',dienGiai:'Thiết bị wifi',dvt:'Cái',sl:2,soTien:615000,tgKh:36},
+  {ma:'Cam',ten:'Vật tư',phongSo:'KVC',ngayMua:'2025-03-26',noiMua:'',dienGiai:'Vật tư',dvt:'Cái',sl:1,soTien:350000,tgKh:36},
+  {ma:'NT10',ten:'Rèm',phongSo:'',ngayMua:'2025-03-26',noiMua:'',dienGiai:'Rèm các phòng',dvt:'Bộ',sl:1,soTien:10828000,tgKh:36},
+  {ma:'NT17',ten:'Kệ tivi',phongSo:'P101',ngayMua:'2025-04-05',noiMua:'',dienGiai:'Kệ tivi',dvt:'Cái',sl:1,soTien:3950000,tgKh:36},
+  {ma:'NT18',ten:'Tủ giày',phongSo:'P101',ngayMua:'2025-04-05',noiMua:'',dienGiai:'Tủ giày',dvt:'Cái',sl:1,soTien:2800000,tgKh:36},
+  {ma:'NT19',ten:'Tủ quần áo',phongSo:'P101',ngayMua:'2025-04-05',noiMua:'',dienGiai:'Tủ quần áo',dvt:'Cái',sl:1,soTien:9343600,tgKh:36},
+  {ma:'NT20',ten:'Bàn ghế',phongSo:'P101',ngayMua:'2025-04-05',noiMua:'',dienGiai:'Bàn học',dvt:'Cái',sl:1,soTien:1250000,tgKh:36},
+  {ma:'NT21',ten:'Giường',phongSo:'P101',ngayMua:'2025-04-05',noiMua:'',dienGiai:'Giường 1,8m',dvt:'Cái',sl:1,soTien:6500000,tgKh:36},
+  {ma:'NT22',ten:'Tap',phongSo:'P101',ngayMua:'2025-04-05',noiMua:'',dienGiai:'Tap',dvt:'Cái',sl:1,soTien:850000,tgKh:36},
+  {ma:'NT23',ten:'Tủ quần áo',phongSo:'P102',ngayMua:'2025-04-05',noiMua:'',dienGiai:'Tủ quần áo 1',dvt:'Cái',sl:1,soTien:6909000,tgKh:36},
+  {ma:'NT24',ten:'Tủ quần áo',phongSo:'P102',ngayMua:'2025-04-05',noiMua:'',dienGiai:'Tủ quần áo 2',dvt:'Cái',sl:1,soTien:9343600,tgKh:36},
+  {ma:'NT25',ten:'Giường',phongSo:'P102',ngayMua:'2025-04-05',noiMua:'',dienGiai:'Giường 1,6m',dvt:'Cái',sl:1,soTien:6700000,tgKh:36},
+  {ma:'NT26',ten:'Giường',phongSo:'P102',ngayMua:'2025-04-05',noiMua:'',dienGiai:'Giường 1,6m',dvt:'Cái',sl:1,soTien:6800000,tgKh:36},
+  {ma:'NT27',ten:'Tủ quần áo',phongSo:'P201',ngayMua:'2025-04-05',noiMua:'',dienGiai:'Tủ quần áo 1',dvt:'Cái',sl:1,soTien:5985000,tgKh:36},
+  {ma:'NT28',ten:'Tủ quần áo',phongSo:'P201',ngayMua:'2025-04-05',noiMua:'',dienGiai:'Tủ quần áo 2',dvt:'Cái',sl:1,soTien:10133200,tgKh:36},
+  {ma:'NT29',ten:'Giường',phongSo:'P201',ngayMua:'2025-04-05',noiMua:'',dienGiai:'Giường 1,6m',dvt:'Cái',sl:1,soTien:6700000,tgKh:36},
+  {ma:'NT30',ten:'Giường',phongSo:'P201',ngayMua:'2025-04-05',noiMua:'',dienGiai:'Giường 1,6m',dvt:'Cái',sl:1,soTien:6700000,tgKh:36},
+  {ma:'NT31',ten:'Tủ quần áo',phongSo:'P202',ngayMua:'2025-04-05',noiMua:'',dienGiai:'Tủ quần áo',dvt:'Cái',sl:1,soTien:7369600,tgKh:36},
+  {ma:'NT32',ten:'Giường',phongSo:'P202',ngayMua:'2025-04-05',noiMua:'',dienGiai:'Giường 1,6m',dvt:'Cái',sl:1,soTien:6700000,tgKh:36},
+  {ma:'NT33',ten:'Tủ quần áo',phongSo:'P203',ngayMua:'2025-04-05',noiMua:'',dienGiai:'Tủ quần áo',dvt:'Cái',sl:1,soTien:7369600,tgKh:36},
+  {ma:'NT34',ten:'Giường',phongSo:'P203',ngayMua:'2025-04-05',noiMua:'',dienGiai:'Giường 1,6m',dvt:'Cái',sl:1,soTien:6700000,tgKh:36},
+];
+
+async function uploadQLTS_NT() {
+  const coso = allCosos.find(c=>c.ten.toLowerCase().includes('nam th'));
+  if (!coso) { toast('Không tìm thấy cơ sở Nam Thọ','error'); return; }
+  if (!confirm(`Upload 89 tài sản vào "${coso.ten}"?`)) return;
+  const batch = db.batch();
+  QLTS_NT.forEach(r=>{
+    batch.set(db.collection('taisan').doc(), {...r, cosoId:coso.id, createdBy:currentUser.uid, createdAt:FieldValue.serverTimestamp()});
+  });
+  await batch.commit();
+  toast('Đã import 89 tài sản Nam Thọ','success');
 }
 
 // ===== CO SO =====
