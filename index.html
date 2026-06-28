@@ -1626,11 +1626,13 @@ function renderKQKD() {
   ];
   const THU_ROWS = THU_FIXED;
 
+  const norm = s => (s||'').normalize('NFC').trim();
+
   // Chi rows: fixed template order + any extra categories found in data
   const CHI_FIXED = ['Dọn dẹp','Hoa hồng','Đồ dùng','Điện thoại','Điện','Nước','Internet','Sửa chữa','Bể bơi','Thuế','Rác','Khác'];
   const chiExtra = [...new Set(
-    cache.bank.filter(b=>(b.chi||0)>0&&b.chiTiet&&(b.chiTiet||'').trim()!=='Chuyển CĐT')
-    .map(b=>(b.chiTiet||'').trim())
+    cache.bank.filter(b=>(b.chi||0)>0&&b.chiTiet&&norm(b.chiTiet)!=='Chuyển CĐT')
+    .map(b=>norm(b.chiTiet))
   )].filter(c=>!CHI_FIXED.includes(c));
   const CHI_ROWS = [...CHI_FIXED, ...chiExtra];
 
@@ -1642,20 +1644,20 @@ function renderKQKD() {
     const bk = allSorted.filter(b=>b.thang===thangKey);
 
     // All revenue from bank
-    const bkCat = cat => bk.reduce((s,b)=>s+((b.chiTiet||'').trim()===cat&&(b.thu||0)>0?(b.thu):0),0);
+    const bkCat = cat => bk.reduce((s,b)=>s+(norm(b.chiTiet)===norm(cat)&&(b.thu||0)>0?(b.thu):0),0);
     const tienThue = bkCat('Tiền thuê');
     const phiDV    = bkCat('Phí dịch vụ');
     const laiNH    = bkCat('Lãi NH');
     const tienCoc  = bkCat('Tiền cọc');
+    const thuKhac  = bkCat('Khác Thu') + bkCat('Thu khác');
     const totalThu = bk.reduce((s,b)=>s+((b.thu||0)>0?b.thu:0),0);
     const doanhThu = tienThue + phiDV + laiNH;
-    const thuKhac  = totalThu - doanhThu - tienCoc;
 
     const chi = {};
-    CHI_ROWS.forEach(k=>{ chi[k] = bk.reduce((s,b)=>s+((b.chiTiet||'').trim()===k?(b.chi||0):0),0); });
+    CHI_ROWS.forEach(k=>{ chi[k] = bk.reduce((s,b)=>s+(norm(b.chiTiet)===k?(b.chi||0):0),0); });
     const totalChi = Object.values(chi).reduce((s,v)=>s+v,0);
 
-    const cdt = bk.reduce((s,b)=>s+((b.chiTiet||'').trim()==='Chuyển CĐT'?(b.chi||0):0),0);
+    const cdt = bk.reduce((s,b)=>s+(norm(b.chiTiet)==='Chuyển CĐT'?(b.chi||0):0),0);
     const soDuDau = soDuBefore(`${yr}-${mn2}-01`);
     const soDuCuoi = soDuDau + totalThu - totalChi - cdt;
 
