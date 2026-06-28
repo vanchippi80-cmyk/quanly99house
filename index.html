@@ -1660,10 +1660,11 @@ function renderKQKD() {
 
   // Chi rows: fixed template order + any extra categories found in data
   const CHI_FIXED = ['Dọn dẹp','Hoa hồng','Đồ dùng','Điện thoại','Điện','Nước','Internet','Sửa chữa','Bể bơi','Thuế','Rác','Khác'];
+  const thuCatsNorm = getAllThuCats().map(t=>norm(t));
   const chiExtra = [...new Set(
     cache.bank.filter(b=>(b.chi||0)>0&&b.chiTiet&&norm(b.chiTiet)!=='Chuyển CĐT')
     .map(b=>norm(b.chiTiet))
-  )].filter(c=>!CHI_FIXED.includes(c));
+  )].filter(c=>!CHI_FIXED.includes(c) && !thuCatsNorm.includes(c));
   const CHI_ROWS = [...CHI_FIXED, ...chiExtra];
 
   // Calculate data for each month
