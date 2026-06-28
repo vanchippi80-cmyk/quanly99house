@@ -417,7 +417,7 @@ tr:hover td{background:#fafafa}
       </div>
       <div class="card">
         <div class="card-header"><h3>Danh mục tài sản</h3></div>
-        <table><thead><tr><th>Mã TS</th><th>Tên tài sản</th><th>Phòng</th><th>SL</th><th>Ngày mua</th><th>Nguyên giá</th><th>TG KH (tháng)</th><th>KH/tháng</th><th>Đã KH</th><th>Còn lại</th><th>Ghi chú</th><th id="ts-th-action"></th></tr></thead>
+        <table><thead><tr><th>Mã TS</th><th>Tên tài sản</th><th>Vị trí</th><th>SL</th><th>Nhà cc</th><th>Diễn giải</th><th>Ngày mua</th><th>Giá mua</th><th>TG KH (tháng)</th><th>KH/tháng</th><th>Đã KH</th><th>Còn lại</th><th>Ghi chú</th><th id="ts-th-action"></th></tr></thead>
         <tbody id="taisan-table"></tbody></table>
       </div>
     </div>
@@ -1942,6 +1942,8 @@ function renderTaiSan() {
     return `<tr>
       <td><b>${ts.ma||''}</b></td><td>${ts.ten}</td><td>${ts.phongSo||'—'}</td>
       <td style="text-align:center">${ts.sl||1}</td>
+      <td style="font-size:11px;color:#6b7280">${ts.noiMua||''}</td>
+      <td style="font-size:11px;color:#374151;max-width:160px">${ts.dienGiai||''}</td>
       <td>${ts.ngayMua||''}</td><td>${fmt(ts.soTien)}</td>
       <td style="text-align:center">${ts.tgKh||'—'}</td>
       <td>${fmt(Math.round(kh.monthly))}/th</td>
@@ -1957,7 +1959,7 @@ function renderTaiSan() {
   const canImport = currentRole==='owner';
   const importBtn = document.getElementById('btn-import-qlts');
   if (importBtn) importBtn.style.display = (canImport && cache.taisan.length===0) ? '' : 'none';
-  document.getElementById('taisan-table').innerHTML = rows || `<tr><td colspan="12"><div class="empty"><div class="icon">🏷️</div><p>Chưa có tài sản nào</p></div></td></tr>`;
+  document.getElementById('taisan-table').innerHTML = rows || `<tr><td colspan="14"><div class="empty"><div class="icon">🏷️</div><p>Chưa có tài sản nào</p></div></td></tr>`;
 }
 function editTaiSan(id) {
   const ts = cache.taisan.find(t=>t.id===id); if(!ts) return;
