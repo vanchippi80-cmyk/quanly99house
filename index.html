@@ -1388,9 +1388,10 @@ function bankCellInput(td, id, field, type, currentVal) {
   const save = async () => {
     let val = input.value;
     if (type === 'number') val = parseFloat(val)||0;
-    const upd = { [field]: val };
+    const bkEntry = cache.bank.find(b => b.id === id);
+    const upd = { [field]: val, cosoId: bkEntry?.cosoId || selectedCosoId };
     if (field === 'ngay' && val) upd.thang = val.slice(0,7);
-    await db.collection('bank').doc(id).update(upd);
+    await db.collection('bank').doc(id).set(upd, { merge: true });
   };
   input.addEventListener('blur', save);
   input.addEventListener('keydown', e => {
@@ -1411,17 +1412,10 @@ function bankCellSelect(td, id, field, currentVal) {
   td.innerHTML = ''; td.appendChild(sel); sel.focus();
   sel.addEventListener('change', async () => {
     const newVal = sel.value;
-    console.log('[bankCellSelect] field:', field, '| selected value:', newVal, '| id:', id);
     const bk = cache.bank.find(b => b.id === id);
-    console.log('[bankCellSelect] cache entry found:', !!bk, '| old value:', bk?.[field]);
     if (bk) bk[field] = newVal;
     renderBank();
-    try {
-      await db.collection('bank').doc(id).update({ [field]: newVal });
-      console.log('[bankCellSelect] Firestore update OK:', newVal);
-    } catch(e) {
-      console.error('[bankCellSelect] Firestore update FAILED:', e.message);
-    }
+    await db.collection('bank').doc(id).set({ [field]: newVal, cosoId: bk?.cosoId || selectedCosoId }, { merge: true });
   });
   sel.addEventListener('keydown', e => { if (e.key === 'Escape') renderBank(); });
 }
