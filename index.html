@@ -1654,8 +1654,7 @@ function renderKQKD() {
 
     const cdt = bk.reduce((s,b)=>s+((b.chiTiet||'').trim()==='Chuyển CĐT'?(b.chi||0):0),0);
     const soDuDau = soDuBefore(`${yr}-${mn2}-01`);
-    const lastBk = bk[bk.length-1];
-    const soDuCuoi = lastBk ? (soDuMap[lastBk.id]??soDuDau) : soDuDau;
+    const soDuCuoi = soDuDau + totalThu - totalChi - cdt;
 
     const tienCoc = bk.reduce((s,b)=>s+((b.chiTiet||'').trim()==='Tiền cọc'&&(b.thu||0)>0?(b.thu):0),0);
     const thuKhac = totalThu - doanhThu - tienCoc;
