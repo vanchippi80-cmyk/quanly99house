@@ -1005,7 +1005,7 @@ function renderAll() {
 }
 
 // ===== HELPERS =====
-function fmt(n) { return (n||0).toLocaleString('vi-VN')+'đ'; }
+function fmt(n) { return (n||0).toLocaleString('vi-VN'); }
 function fmtNgay(s) { if (!s) return ''; const [y,m,d] = s.split('-'); return `${d}-${m}-${y}`; }
 function fmtNum(n) { return (n||0).toLocaleString('vi-VN'); }
 function daysUntil(dateStr) { if (!dateStr) return 9999; return Math.round((new Date(dateStr)-new Date())/(1000*60*60*24)); }
