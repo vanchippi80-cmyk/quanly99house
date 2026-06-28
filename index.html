@@ -1958,7 +1958,7 @@ function renderTaiSan() {
   document.getElementById('ts-conlai').textContent = fmt(Math.round(totConLai));
   const canImport = currentRole==='owner';
   const importBtn = document.getElementById('btn-import-qlts');
-  if (importBtn) importBtn.style.display = (canImport && cache.taisan.length===0) ? '' : 'none';
+  if (importBtn) importBtn.style.display = canImport ? '' : 'none';
   document.getElementById('taisan-table').innerHTML = rows || `<tr><td colspan="14"><div class="empty"><div class="icon">🏷️</div><p>Chưa có tài sản nào</p></div></td></tr>`;
 }
 function editTaiSan(id) {
