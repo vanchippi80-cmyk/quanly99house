@@ -328,7 +328,7 @@ tr:hover td{background:#fafafa}
       <div style="display:flex;gap:8px;margin-bottom:16px;align-items:center;flex-wrap:wrap">
         <button class="btn btn-primary" id="btn-add-phong" onclick="openModal('modal-phong')">+ Thêm hợp đồng</button>
         <button class="btn btn-secondary" id="btn-add-phuLuc" onclick="openPhuLucModal()" style="display:none">+ Phụ lục hợp đồng</button>
-        <button class="btn btn-secondary" id="btn-ql-phong" onclick="openModal('modal-ql-phong')" style="display:none">🚪 Quản lý phòng</button>
+        <button class="btn btn-secondary" id="btn-ql-phong" onclick="openModal('modal-ql-phong')" style="display:none">🚪 Danh mục phòng</button>
       </div>
       <div class="card" style="overflow-x:auto">
         <table style="font-size:12px;min-width:1500px">
@@ -582,7 +582,7 @@ tr:hover td{background:#fafafa}
   </div>
 </div>
 
-<!-- Modal Quản lý phòng (danh mục) -->
+<!-- Modal Danh mục phòng (danh mục) -->
 <div class="modal-overlay" id="modal-ql-phong">
   <div class="modal" style="width:700px;max-width:98vw">
     <div class="modal-header"><h3>🚪 Danh sách phòng</h3><button class="modal-close" onclick="closeModal('modal-ql-phong')">✕</button></div>
@@ -2384,15 +2384,22 @@ async function saveThu() {
 }
 
 async function savePhong() {
-  const id = document.getElementById('modal-phong').dataset.editId;
-  const data = {
-    cosoId:selectedCosoId, so:document.getElementById('p-so').value,
-    tang:document.getElementById('p-tang').value, loai:document.getElementById('p-loai').value,
-    dt:Number(document.getElementById('p-dt').value)||0,
+  const editId = document.getElementById('modal-phong').dataset.editId;
+  // Khi thêm hợp đồng: tìm phòng đã có trong danh mục theo số phòng được chọn
+  const selectedSo = document.getElementById('p-so').value;
+  if (!selectedSo) { toast('Chọn phòng','error'); return; }
+  const existingPhong = cache.phong.find(p => p.so === selectedSo);
+  const docId = editId || existingPhong?.id;
+  if (!docId) { toast('Phòng không tồn tại trong danh mục','error'); return; }
+
+  const contractData = {
+    ten:document.getElementById('p-ten').value,
+    sdt:document.getElementById('p-sdt').value,
+    batdau:document.getElementById('p-batdau').value,
+    ketthuc:document.getElementById('p-ketthuc').value,
+    coc:Number(document.getElementById('p-coc').value)||0,
     gia:Number(document.getElementById('p-gia').value)||0,
-    tt:document.getElementById('p-tt').value, ten:document.getElementById('p-ten').value,
-    sdt:document.getElementById('p-sdt').value, batdau:document.getElementById('p-batdau').value,
-    ketthuc:document.getElementById('p-ketthuc').value, coc:Number(document.getElementById('p-coc').value)||0,
+    tt:document.getElementById('p-tt').value,
     soHopDong:document.getElementById('p-soHopDong').value,
     noiDung:document.getElementById('p-noiDung').value,
     ngayHopDong:document.getElementById('p-ngayHopDong').value,
@@ -2403,9 +2410,8 @@ async function savePhong() {
     ghiChu:document.getElementById('p-ghiChu').value,
     updatedAt:FieldValue.serverTimestamp()
   };
-  if (!data.so||!data.gia) { toast('Nhập số phòng và giá thuê','error'); return; }
-  if (id) { await db.collection('phong').doc(id).update(data); toast('Đã cập nhật','success'); }
-  else { await db.collection('phong').add({...data, createdAt:FieldValue.serverTimestamp(), createdBy:currentUser.uid}); toast('Đã thêm phòng','success'); }
+  await db.collection('phong').doc(docId).update(contractData);
+  toast('Đã lưu hợp đồng','success');
   delete document.getElementById('modal-phong').dataset.editId;
   closeModal('modal-phong');
 }
@@ -2587,7 +2593,7 @@ function editPhong(id) {
   document.getElementById('modal-phong').dataset.editId=id;
   openModal('modal-phong');
 }
-// Quản lý phòng (danh mục)
+// Danh mục phòng (danh mục)
 function showAddPhongRow() { document.getElementById('ql-phong-add-row').style.display='block'; }
 async function saveQuanLyPhong() {
   const so = document.getElementById('qp-so').value.trim();
