@@ -1702,8 +1702,8 @@ function renderThu() {
       ${td(t.tienNuoc?fmt(t.tienNuoc):'')}
       ${td(tong?`<b style="color:#059669">${fmt(tong)}</b>`:'')}
       ${td(t.hoaHong?fmt(t.hoaHong):'')}
-      <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6">
-        ${canEdit?`<button class="btn btn-danger btn-sm" onclick="deleteThu('${t.id}')">Xoá</button>`:''}
+      <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6;white-space:nowrap">
+        ${canEdit?`<button class="btn btn-secondary btn-sm" onclick="editThuRow('${t.id}')">Sửa</button> <button class="btn btn-danger btn-sm" onclick="deleteThu('${t.id}')">Xoá</button>`:''}
       </td>
     </tr>`;
   }).join('');
@@ -1714,6 +1714,106 @@ function renderThu() {
 async function deleteThu(id) {
   if(!confirm('Xoá khoản thu này?')) return;
   await db.collection('thu').doc(id).delete(); toast('Đã xoá','success');
+}
+
+function editThuRow(id) {
+  const t = cache.thu.find(x=>x.id===id);
+  if(!t) return;
+  // Xoá row nhập đang mở (nếu có)
+  document.getElementById('thu-input-row')?.remove();
+  document.getElementById('thu-edit-row-'+id)?.remove();
+
+  const phongOpts = cache.phong
+    .filter((p,i,arr)=>arr.findIndex(x=>x.so===p.so)===i)
+    .sort((a,b)=>(a.so||'').localeCompare(b.so||''))
+    .map(p=>`<option value="${p.so}"${p.so===t.phong?' selected':''}>${p.so}</option>`).join('');
+
+  const inp = (fid,type,val,style='') =>
+    `<input id="tre-${fid}" type="${type}" value="${val??''}" style="width:100%;padding:3px 5px;border:1px solid #d1d5db;border-radius:4px;font-size:11px;${style}" oninput="calcThuEditRow('${id}')">`;
+
+  // Tìm <tr> hiện tại và thay bằng row edit
+  const tbody = document.getElementById('thu-table');
+  const existingRows = tbody.querySelectorAll('tr');
+  let targetRow = null;
+  existingRows.forEach(tr => {
+    if(tr.innerHTML.includes(`editThuRow('${id}')`)) targetRow = tr;
+  });
+  if(!targetRow) return;
+
+  const editRow = document.createElement('tr');
+  editRow.id = 'thu-edit-row-'+id;
+  editRow.style.background = '#fffbeb';
+  editRow.innerHTML = `
+    <td style="position:sticky;left:0;background:#fffbeb;z-index:5;padding:4px 6px;border-right:1px solid #e5e7eb">
+      <input id="tre-ngay" type="date" value="${t.ngay||''}" style="width:100%;padding:3px 5px;border:1px solid #d1d5db;border-radius:4px;font-size:11px">
+    </td>
+    <td style="position:sticky;left:110px;background:#fffbeb;z-index:5;padding:4px 6px;border-right:2px solid #e5e7eb">
+      <select id="tre-phong" style="width:100%;padding:3px;border:1px solid #d1d5db;border-radius:4px;font-size:11px">
+        <option value="">--</option>${phongOpts}
+      </select>
+    </td>
+    <td style="padding:4px 6px">${inp('soHopDong','text',t.soHopDong)}</td>
+    <td style="padding:4px 6px">${inp('kh','text',t.kh||t.ten)}</td>
+    <td style="padding:4px 6px">${inp('tienCoc','number',t.tienCoc||0)}</td>
+    <td style="padding:4px 6px">${inp('tienThue','number',t.tienThue||t.sotien||0)}</td>
+    <td style="padding:4px 6px">${inp('dienCu','number',t.dienCu||0)}</td>
+    <td style="padding:4px 6px">${inp('dienMoi','number',t.dienMoi||0)}</td>
+    <td style="padding:4px 6px;text-align:right;font-size:11px;color:#6b7280"><span id="tre-sd-${id}">0</span></td>
+    <td style="padding:4px 6px">${inp('dienGia','number',t.dienGia||t.dienGia||3800)}</td>
+    <td style="padding:4px 6px;font-weight:700;text-align:right"><span id="tre-tienDien-${id}">0</span></td>
+    <td style="padding:4px 6px">${inp('slNguoi','number',t.nuocSL||0)}</td>
+    <td style="padding:4px 6px">${inp('donGiaNuoc','number',t.nuocGia||50000)}</td>
+    <td style="padding:4px 6px;font-weight:700;text-align:right"><span id="tre-tienNuoc-${id}">0</span></td>
+    <td style="padding:4px 6px;font-weight:700;color:#059669;text-align:right"><span id="tre-tong-${id}">0</span></td>
+    <td style="padding:4px 6px">${inp('hoaHong','number',t.hoaHong||0)}</td>
+    <td style="padding:4px 6px;white-space:nowrap">
+      <button class="btn btn-primary btn-sm" onclick="saveThuEdit('${id}')">💾</button>
+      <button class="btn btn-secondary btn-sm" onclick="renderThu()">✕</button>
+    </td>`;
+  targetRow.replaceWith(editRow);
+  calcThuEditRow(id);
+}
+
+function calcThuEditRow(id) {
+  const cu = Number(document.getElementById('tre-dienCu')?.value)||0;
+  const moi = Number(document.getElementById('tre-dienMoi')?.value)||0;
+  const gia = Number(document.getElementById('tre-dienGia')?.value)||3800;
+  const sl = Number(document.getElementById('tre-slNguoi')?.value)||0;
+  const giaN = Number(document.getElementById('tre-donGiaNuoc')?.value)||50000;
+  const sd = moi-cu, tienDien=sd*gia, tienNuoc=sl*giaN;
+  const tienCoc = Number(document.getElementById('tre-tienCoc')?.value)||0;
+  const tienThue = Number(document.getElementById('tre-tienThue')?.value)||0;
+  const tong = tienCoc+tienThue+tienDien+tienNuoc;
+  const el = s => document.getElementById(s);
+  if(el(`tre-sd-${id}`)) el(`tre-sd-${id}`).textContent = sd||0;
+  if(el(`tre-tienDien-${id}`)) el(`tre-tienDien-${id}`).textContent = fmtNum(tienDien);
+  if(el(`tre-tienNuoc-${id}`)) el(`tre-tienNuoc-${id}`).textContent = fmtNum(tienNuoc);
+  if(el(`tre-tong-${id}`)) el(`tre-tong-${id}`).textContent = fmtNum(tong);
+}
+
+async function saveThuEdit(id) {
+  const ngay = document.getElementById('tre-ngay').value;
+  const phong = document.getElementById('tre-phong').value;
+  if(!ngay||!phong) { toast('Chọn phòng và ngày','error'); return; }
+  const cu = Number(document.getElementById('tre-dienCu').value)||0;
+  const moi = Number(document.getElementById('tre-dienMoi').value)||0;
+  const giaD = Number(document.getElementById('tre-dienGia').value)||3800;
+  const sl = Number(document.getElementById('tre-slNguoi').value)||0;
+  const giaN = Number(document.getElementById('tre-donGiaNuoc').value)||50000;
+  const tienDien = (moi-cu)*giaD, tienNuoc = sl*giaN;
+  const tienCoc = Number(document.getElementById('tre-tienCoc').value)||0;
+  const tienThue = Number(document.getElementById('tre-tienThue').value)||0;
+  await db.collection('thu').doc(id).update({
+    ngay, thang: ngay.slice(0,7), phong,
+    soHopDong: document.getElementById('tre-soHopDong').value,
+    kh: document.getElementById('tre-kh').value,
+    tienCoc, tienThue, sotien: tienThue,
+    dienCu: cu, dienMoi: moi, dienGia: giaD, tienDien,
+    nuocSL: sl, nuocGia: giaN, tienNuoc,
+    hoaHong: Number(document.getElementById('tre-hoaHong').value)||0,
+    tongThu: tienCoc+tienThue+tienDien+tienNuoc,
+  });
+  toast('Đã cập nhật','success');
 }
 
 function addThuRow() {
