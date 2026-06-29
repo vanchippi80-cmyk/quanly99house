@@ -1914,16 +1914,19 @@ function renderHopDong() {
     const btn2=document.getElementById('btn-ql-phong'); if(btn2) btn2.style.display='';
   }
 
+  // Hiện tất cả hợp đồng, nhóm theo số phòng, sắp xếp theo phòng rồi ngày
   const sorted = [...cache.phong]
     .filter(p => p.ten || p.soHopDong || (p.phuLuc && p.phuLuc.length))
-    .sort((a,b)=>(a.so||'').localeCompare(b.so||''));
+    .sort((a,b) => {
+      const so = (a.so||'').localeCompare(b.so||'');
+      if(so !== 0) return so;
+      return (a.batdau||a.ngayHopDong||'').localeCompare(b.batdau||b.ngayHopDong||'');
+    });
   let rows = '';
   sorted.forEach(p => {
-    // Main contract row
     const phuLucs = p.phuLuc || [];
-    const rowspan = 1 + phuLucs.length;
     const statusCell = p.ten ? hdStatus(p) : '<span class="badge bgr">Trống</span>';
-    rows += `<tr style="background:${phuLucs.length?'#f0fdf4':''}">
+    rows += `<tr>
       <td><b>${p.so}</b></td>
       <td>${p.soHopDong||''}</td>
       <td style="color:#1d4ed8;font-weight:500">${p.noiDung||'Hợp đồng thuê'}</td>
