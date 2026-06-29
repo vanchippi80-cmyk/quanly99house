@@ -1815,15 +1815,18 @@ async function saveThuEdit(id) {
   const hoaHong = Number(document.getElementById('tre-hoaHong')?.value)||0;
   const soHopDong = document.getElementById('tre-soHopDong')?.value||'';
   const kh = document.getElementById('tre-kh')?.value||'';
+  const payload = {
+    ngay, thang: ngay.slice(0,7), phong, soHopDong, kh,
+    tienCoc, tienThue, sotien: tienThue,
+    dienCu: cu, dienMoi: moi, dienGia: giaD, tienDien,
+    nuocSL: sl, nuocGia: giaN, tienNuoc, hoaHong,
+    tongThu: tienCoc+tienThue+tienDien+tienNuoc,
+  };
+  // Reset trước để onSnapshot không re-open edit row
+  editingThuId = null;
+  renderThu();
   try {
-    await db.collection('thu').doc(id).update({
-      ngay, thang: ngay.slice(0,7), phong, soHopDong, kh,
-      tienCoc, tienThue, sotien: tienThue,
-      dienCu: cu, dienMoi: moi, dienGia: giaD, tienDien,
-      nuocSL: sl, nuocGia: giaN, tienNuoc, hoaHong,
-      tongThu: tienCoc+tienThue+tienDien+tienNuoc,
-    });
-    editingThuId = null;
+    await db.collection('thu').doc(id).update(payload);
     toast('Đã cập nhật','success');
   } catch(e) {
     toast('Lỗi: '+e.message,'error');
