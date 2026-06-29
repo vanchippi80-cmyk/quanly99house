@@ -410,7 +410,8 @@ tr:hover td{background:#fafafa}
         <button class="btn btn-primary" id="btn-add-taisan" onclick="openModal('modal-taisan')">+ Thêm tài sản</button>
         <button class="btn btn-secondary" id="btn-import-qlts" onclick="uploadQLTS()" style="display:none">📥 Import QLTS</button>
         <button class="btn btn-secondary" id="btn-import-nt" onclick="uploadQLTS_NT()" style="display:none">📥 Import NT</button>
-        <input type="text" id="ts-filter-ten" placeholder="🔍 Lọc theo tên tài sản..." oninput="renderTaiSan()" style="padding:7px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;width:240px">
+        <input type="text" id="ts-filter-ten" placeholder="🔍 Lọc theo tên tài sản..." oninput="renderTaiSan()" style="padding:7px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;width:220px">
+        <input type="text" id="ts-filter-vitri" placeholder="🔍 Lọc theo vị trí..." oninput="renderTaiSan()" style="padding:7px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;width:180px">
       </div>
       <div class="stats-grid" style="grid-template-columns:repeat(2,1fr)">
         <div class="stat-card blue"><div class="lbl">Tổng nguyên giá</div><div class="val" id="ts-nguyen">—</div></div>
@@ -1953,7 +1954,12 @@ function renderTaiSan() {
   let totNguyen=0;
   const sorted = [...cache.taisan].sort((a,b)=>(a.ma||'').localeCompare(b.ma||''));
   const filterTen = (document.getElementById('ts-filter-ten')?.value||'').normalize('NFC').toLowerCase();
-  const display = filterTen ? sorted.filter(ts=>(ts.ten||'').normalize('NFC').toLowerCase().includes(filterTen)) : sorted;
+  const filterViTri = (document.getElementById('ts-filter-vitri')?.value||'').normalize('NFC').toLowerCase();
+  const display = sorted.filter(ts=>{
+    if(filterTen && !(ts.ten||'').normalize('NFC').toLowerCase().includes(filterTen)) return false;
+    if(filterViTri && !(ts.phongSo||'').normalize('NFC').toLowerCase().includes(filterViTri)) return false;
+    return true;
+  });
   const rows = display.map(ts=>{
     totNguyen+=ts.soTien||0;
     return `<tr>
