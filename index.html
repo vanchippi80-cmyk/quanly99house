@@ -325,10 +325,19 @@ tr:hover td{background:#fafafa}
 
     <!-- HOP DONG TAB -->
     <div class="tab-pane" id="tab-hop-dong">
-      <div style="display:flex;gap:8px;margin-bottom:16px;align-items:center;flex-wrap:wrap">
+      <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;flex-wrap:wrap">
         <button class="btn btn-primary" id="btn-add-phong" onclick="openModal('modal-phong')">+ Thêm hợp đồng</button>
         <button class="btn btn-secondary" id="btn-add-phuLuc" onclick="openPhuLucModal()" style="display:none">+ Phụ lục hợp đồng</button>
         <button class="btn btn-secondary" id="btn-ql-phong" onclick="openModal('modal-ql-phong')" style="display:none">🚪 Danh mục phòng</button>
+      </div>
+      <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:12px">
+        <div class="stat-card blue"><div class="lbl">Tổng hợp đồng</div><div class="val" id="hd-total">—</div></div>
+        <div class="stat-card green"><div class="lbl">Còn hiệu lực</div><div class="val" id="hd-hieuluc">—</div></div>
+        <div class="stat-card red"><div class="lbl">Hết hạn</div><div class="val" id="hd-hethan">—</div></div>
+      </div>
+      <div style="margin-bottom:10px">
+        <input type="text" id="hd-filter-phong" placeholder="🔍 Lọc theo phòng..." oninput="renderHopDong()"
+          style="padding:7px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;width:200px">
       </div>
       <div class="card" style="overflow-x:auto;max-height:75vh;overflow-y:auto">
         <table style="font-size:12px;min-width:1500px;border-collapse:separate;border-spacing:0">
@@ -1928,9 +1937,24 @@ function renderHopDong() {
     const btn2=document.getElementById('btn-ql-phong'); if(btn2) btn2.style.display='';
   }
 
-  // Hiện tất cả hợp đồng, nhóm theo số phòng, sắp xếp theo phòng rồi ngày
+  // Stat cards
+  const allHD = cache.phong.filter(p => p.ten || p.soHopDong);
+  const hieuluc = allHD.filter(p => { const d=daysUntil(p.ketthuc); return !p.ketthuc||d>=0; });
+  const hethan  = allHD.filter(p => p.ketthuc && daysUntil(p.ketthuc)<0);
+  const elTotal = document.getElementById('hd-total');
+  const elHL    = document.getElementById('hd-hieuluc');
+  const elHT    = document.getElementById('hd-hethan');
+  if(elTotal) elTotal.textContent = allHD.length;
+  if(elHL) elHL.textContent = hieuluc.length;
+  if(elHT) elHT.textContent = hethan.length;
+
+  // Filter theo phòng
+  const filterPhong = (document.getElementById('hd-filter-phong')?.value||'').toLowerCase().normalize('NFC');
+
+  // Hiện tất cả hợp đồng, sắp xếp theo phòng rồi ngày
   const sorted = [...cache.phong]
-    .filter(p => p.ten || p.soHopDong || (p.phuLuc && p.phuLuc.length))
+    .filter(p => (p.ten || p.soHopDong || (p.phuLuc && p.phuLuc.length))
+      && (!filterPhong || (p.so||'').toLowerCase().normalize('NFC').includes(filterPhong)))
     .sort((a,b) => {
       const so = (a.so||'').localeCompare(b.so||'');
       if(so !== 0) return so;
