@@ -291,20 +291,37 @@ tr:hover td{background:#fafafa}
 
     <!-- THU TIEN TAB -->
     <div class="tab-pane" id="tab-thu-tien">
-      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
-        <button class="btn btn-primary" id="btn-add-thu" onclick="openModalThu()">+ Nhập khoản thu</button>
+      <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;flex-wrap:wrap">
+        <button class="btn btn-primary" id="btn-add-thu" onclick="addThuRow()">+ Thêm dòng</button>
         <button class="btn btn-secondary" onclick="exportCSV()">⬇ Xuất CSV</button>
+        <input type="month" class="tab-month-input" onchange="updateGlobalMonth(this.value)" style="padding:5px 8px;border-radius:7px;border:1.5px solid #e5e7eb;font-size:12px;cursor:pointer;margin-left:auto">
+        <span id="thu-count" style="font-size:11px;color:#6b7280"></span>
       </div>
-      <div class="card">
-        <div class="card-header">
-          <h3 id="thu-header">Báo cáo doanh thu</h3>
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-            <input type="month" class="tab-month-input" onchange="updateGlobalMonth(this.value)" style="padding:5px 8px;border-radius:7px;border:1.5px solid #e5e7eb;font-size:12px;cursor:pointer">
-            <span id="thu-count" style="font-size:11px;color:#6b7280"></span>
-          </div>
-        </div>
-        <table><thead><tr><th>Ngày thu</th><th>Phòng</th><th>Khách thuê</th><th>Loại</th><th>Số tiền</th><th>Điện</th><th>Nước</th><th>Người thu</th><th>Ghi chú</th><th id="thu-th-action"></th></tr></thead>
-        <tbody id="thu-table"></tbody></table>
+      <div style="overflow-x:auto;overflow-y:auto;max-height:72vh;border-radius:10px;border:1px solid #e5e7eb">
+        <table id="thu-excel-table" style="font-size:12px;min-width:1600px;border-collapse:separate;border-spacing:0">
+          <thead>
+            <tr style="background:#14532d;color:#fff">
+              <th style="position:sticky;top:0;left:0;z-index:30;background:#14532d;min-width:110px;padding:8px 10px">Ngày TT</th>
+              <th style="position:sticky;top:0;left:110px;z-index:30;background:#14532d;min-width:70px;padding:8px 10px">Phòng</th>
+              <th style="position:sticky;top:0;z-index:20;background:#14532d;padding:8px 10px;min-width:110px">Hợp đồng số</th>
+              <th style="position:sticky;top:0;z-index:20;background:#14532d;padding:8px 10px;min-width:150px">Tên khách</th>
+              <th style="position:sticky;top:0;z-index:20;background:#14532d;padding:8px 10px">Tiền cọc</th>
+              <th style="position:sticky;top:0;z-index:20;background:#14532d;padding:8px 10px">Tiền thuê</th>
+              <th style="position:sticky;top:0;z-index:20;background:#14532d;padding:8px 10px">Số điện cũ</th>
+              <th style="position:sticky;top:0;z-index:20;background:#14532d;padding:8px 10px">Số điện mới</th>
+              <th style="position:sticky;top:0;z-index:20;background:#14532d;padding:8px 10px">Số điện SD</th>
+              <th style="position:sticky;top:0;z-index:20;background:#14532d;padding:8px 10px">ĐG điện</th>
+              <th style="position:sticky;top:0;z-index:20;background:#14532d;padding:8px 10px">Tiền điện</th>
+              <th style="position:sticky;top:0;z-index:20;background:#14532d;padding:8px 10px">SL người</th>
+              <th style="position:sticky;top:0;z-index:20;background:#14532d;padding:8px 10px">ĐG nước</th>
+              <th style="position:sticky;top:0;z-index:20;background:#14532d;padding:8px 10px">Tiền nước</th>
+              <th style="position:sticky;top:0;z-index:20;background:#14532d;padding:8px 10px;font-weight:700">Tổng thu</th>
+              <th style="position:sticky;top:0;z-index:20;background:#14532d;padding:8px 10px">Hoa hồng</th>
+              <th style="position:sticky;top:0;z-index:20;background:#14532d;padding:8px 10px" id="thu-th-action"></th>
+            </tr>
+          </thead>
+          <tbody id="thu-table"></tbody>
+        </table>
       </div>
     </div>
 
@@ -1701,28 +1718,165 @@ function exportBankCSV() {
 }
 
 // ===== THU TIEN =====
+function thuSd(t) { return (t.dienMoi||0)-(t.dienCu||0); }
+function thuTongThu(t) {
+  return (t.tienCoc||0)+(t.tienThue||t.sotien||0)+(t.tienDien||0)+(t.tienNuoc||0);
+}
 function renderThu() {
   const thang = getSelMonth();
-  const thuM = thuOfMonth(thang);
-  document.getElementById('thu-header').textContent = `Thu tiền tháng ${thang.split('-')[1]}/${thang.split('-')[0]}`;
-  document.getElementById('thu-count').textContent = `${thuM.length} khoản | Tổng: ${fmt(thuM.reduce((s,t)=>s+(t.sotien||0),0))}`;
+  const thuM = thuOfMonth(thang).sort((a,b)=>(a.phong||'').localeCompare(b.phong||'')||(a.ngay||'').localeCompare(b.ngay||''));
+  const total = thuM.reduce((s,t)=>s+thuTongThu(t),0);
+  document.getElementById('thu-count').textContent = `${thuM.length} dòng | Tổng: ${fmt(total)}`;
   const canEdit = ['owner','manager'].includes(currentRole);
-  document.getElementById('thu-th-action').textContent = canEdit?'Xoá':'';
-  const rows = [...thuM].sort((a,b)=>(b.ngay||'').localeCompare(a.ngay||'')).map(t=>`
-    <tr>
-      <td>${t.ngay||''}</td><td><b>${t.phong||''}</b></td><td>${t.kh||''}</td>
-      <td><span class="badge bb">${t.loai||'Tiền thuê'}</span></td>
-      <td style="font-weight:700;color:#059669">${fmt(t.sotien)}</td>
-      <td>${t.tienDien?fmt(t.tienDien):''}</td>
-      <td>${t.tienNuoc?fmt(t.tienNuoc):''}</td>
-      <td>${t.nguoithu||''}</td><td>${t.ghichu||''}</td>
-      <td>${canEdit?`<button class="btn btn-danger btn-sm" onclick="deleteThu('${t.id}')">Xoá</button>`:''}</td>
-    </tr>`).join('');
-  document.getElementById('thu-table').innerHTML = rows || `<tr><td colspan="10"><div class="empty"><div class="icon">💰</div><p>Chưa có khoản thu nào tháng ${thang}</p></div></td></tr>`;
+  const thAction = document.getElementById('thu-th-action');
+  if(thAction) thAction.textContent = canEdit?'Xử lý':'';
+
+  const td = (v,style='') => `<td style="text-align:right;padding:5px 8px;border-bottom:1px solid #f3f4f6;${style}">${v??''}</td>`;
+  const rows = thuM.map(t => {
+    const sd = thuSd(t);
+    const tong = thuTongThu(t);
+    return `<tr>
+      <td style="position:sticky;left:0;background:#fff;z-index:5;padding:5px 8px;border-bottom:1px solid #f3f4f6;border-right:1px solid #e5e7eb">${t.ngay||''}</td>
+      <td style="position:sticky;left:110px;background:#fff;z-index:5;padding:5px 8px;border-bottom:1px solid #f3f4f6;border-right:2px solid #e5e7eb"><b>${t.phong||''}</b></td>
+      ${td(t.soHopDong||'')}
+      ${td(t.kh||t.ten||'')}
+      ${td(t.tienCoc?fmt(t.tienCoc):'')}
+      ${td(t.tienThue?fmt(t.tienThue):t.sotien?fmt(t.sotien):'')}
+      ${td(t.dienCu||'')}
+      ${td(t.dienMoi||'')}
+      ${td(sd||'')}
+      ${td(t.dienGia?fmt(t.dienGia):'')}
+      ${td(t.tienDien?fmt(t.tienDien):'')}
+      ${td(t.nuocSL||'')}
+      ${td(t.nuocGia?fmt(t.nuocGia):'')}
+      ${td(t.tienNuoc?fmt(t.tienNuoc):'')}
+      ${td(tong?`<b style="color:#059669">${fmt(tong)}</b>`:'')}
+      ${td(t.hoaHong?fmt(t.hoaHong):'')}
+      <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6">
+        ${canEdit?`<button class="btn btn-danger btn-sm" onclick="deleteThu('${t.id}')">Xoá</button>`:''}
+      </td>
+    </tr>`;
+  }).join('');
+  document.getElementById('thu-table').innerHTML = rows ||
+    `<tr><td colspan="17" style="text-align:center;padding:24px;color:#9ca3af">Chưa có khoản thu tháng ${thang}</td></tr>`;
 }
+
 async function deleteThu(id) {
   if(!confirm('Xoá khoản thu này?')) return;
   await db.collection('thu').doc(id).delete(); toast('Đã xoá','success');
+}
+
+function addThuRow() {
+  // Xoá row đang nhập cũ nếu có
+  const existing = document.getElementById('thu-input-row');
+  if(existing) existing.remove();
+
+  const phongOpts = cache.phong
+    .filter((p,i,arr)=>arr.findIndex(x=>x.so===p.so)===i)
+    .sort((a,b)=>(a.so||'').localeCompare(b.so||''))
+    .map(p=>`<option value="${p.so}">${p.so}</option>`).join('');
+
+  const inp = (id,type='text',placeholder='',style='') =>
+    `<input id="tri-${id}" type="${type}" placeholder="${placeholder}" style="width:100%;padding:3px 5px;border:1px solid #d1d5db;border-radius:4px;font-size:11px;${style}" oninput="calcThuRow()">`;
+
+  const row = document.createElement('tr');
+  row.id = 'thu-input-row';
+  row.style.background = '#f0fdf4';
+  row.innerHTML = `
+    <td style="position:sticky;left:0;background:#f0fdf4;z-index:5;padding:4px 6px;border-right:1px solid #e5e7eb">
+      <input id="tri-ngay" type="date" value="${new Date().toISOString().split('T')[0]}" style="width:100%;padding:3px 5px;border:1px solid #d1d5db;border-radius:4px;font-size:11px">
+    </td>
+    <td style="position:sticky;left:110px;background:#f0fdf4;z-index:5;padding:4px 6px;border-right:2px solid #e5e7eb">
+      <select id="tri-phong" onchange="onThuRowPhongChange()" style="width:100%;padding:3px;border:1px solid #d1d5db;border-radius:4px;font-size:11px">
+        <option value="">--</option>${phongOpts}
+      </select>
+    </td>
+    <td style="padding:4px 6px">${inp('soHopDong')}</td>
+    <td style="padding:4px 6px">${inp('kh')}</td>
+    <td style="padding:4px 6px">${inp('tienCoc','number','0')}</td>
+    <td style="padding:4px 6px">${inp('tienThue','number','0')}</td>
+    <td style="padding:4px 6px">${inp('dienCu','number','0')}</td>
+    <td style="padding:4px 6px">${inp('dienMoi','number','0')}</td>
+    <td style="padding:4px 6px;color:#6b7280;font-size:11px;text-align:right"><span id="tri-sd">0</span></td>
+    <td style="padding:4px 6px">${inp('dienGia','number','3800')}</td>
+    <td style="padding:4px 6px;font-weight:700;text-align:right"><span id="tri-tienDien">0</span></td>
+    <td style="padding:4px 6px">${inp('slNguoi','number','')}</td>
+    <td style="padding:4px 6px">${inp('donGiaNuoc','number','50000')}</td>
+    <td style="padding:4px 6px;font-weight:700;text-align:right"><span id="tri-tienNuoc">0</span></td>
+    <td style="padding:4px 6px;font-weight:700;color:#059669;text-align:right"><span id="tri-tong">0</span></td>
+    <td style="padding:4px 6px">${inp('hoaHong','number','0')}</td>
+    <td style="padding:4px 6px;white-space:nowrap">
+      <button class="btn btn-primary btn-sm" onclick="saveThuRow()">💾</button>
+      <button class="btn btn-secondary btn-sm" onclick="document.getElementById('thu-input-row')?.remove()">✕</button>
+    </td>`;
+  document.getElementById('thu-table').prepend(row);
+  document.getElementById('tri-ngay').focus();
+}
+
+function onThuRowPhongChange() {
+  const so = document.getElementById('tri-phong').value;
+  const contracts = cache.phong.filter(p=>p.so===so && p.soHopDong)
+    .sort((a,b)=>(b.batdau||'').localeCompare(a.batdau||''));
+  const latest = contracts[0];
+  if(latest) {
+    if(!document.getElementById('tri-kh').value) document.getElementById('tri-kh').value = latest.ten||'';
+    if(!document.getElementById('tri-soHopDong').value) document.getElementById('tri-soHopDong').value = latest.soHopDong||'';
+    if(!document.getElementById('tri-tienThue').value||document.getElementById('tri-tienThue').value==='0') document.getElementById('tri-tienThue').value = latest.gia||'';
+    if(!document.getElementById('tri-dienGia').value||document.getElementById('tri-dienGia').value==='3800') document.getElementById('tri-dienGia').value = latest.giaDien||3800;
+    if(!document.getElementById('tri-donGiaNuoc').value||document.getElementById('tri-donGiaNuoc').value==='50000') document.getElementById('tri-donGiaNuoc').value = latest.giaNuoc||50000;
+    if(!document.getElementById('tri-slNguoi').value) document.getElementById('tri-slNguoi').value = latest.slKhach||'';
+  }
+  calcThuRow();
+}
+
+function calcThuRow() {
+  const cu = Number(document.getElementById('tri-dienCu')?.value)||0;
+  const moi = Number(document.getElementById('tri-dienMoi')?.value)||0;
+  const gia = Number(document.getElementById('tri-dienGia')?.value)||3800;
+  const slNuoc = Number(document.getElementById('tri-slNguoi')?.value)||0;
+  const giaNuoc = Number(document.getElementById('tri-donGiaNuoc')?.value)||50000;
+  const sd = moi - cu;
+  const tienDien = sd * gia;
+  const tienNuoc = slNuoc * giaNuoc;
+  const tienCoc = Number(document.getElementById('tri-tienCoc')?.value)||0;
+  const tienThue = Number(document.getElementById('tri-tienThue')?.value)||0;
+  const tong = tienCoc + tienThue + tienDien + tienNuoc;
+  const el = id => document.getElementById(id);
+  if(el('tri-sd')) el('tri-sd').textContent = sd||0;
+  if(el('tri-tienDien')) el('tri-tienDien').textContent = fmtNum(tienDien);
+  if(el('tri-tienNuoc')) el('tri-tienNuoc').textContent = fmtNum(tienNuoc);
+  if(el('tri-tong')) el('tri-tong').textContent = fmtNum(tong);
+}
+
+async function saveThuRow() {
+  const phong = document.getElementById('tri-phong').value;
+  const ngay = document.getElementById('tri-ngay').value;
+  if(!phong||!ngay) { toast('Chọn phòng và ngày','error'); return; }
+  const cu = Number(document.getElementById('tri-dienCu').value)||0;
+  const moi = Number(document.getElementById('tri-dienMoi').value)||0;
+  const giaD = Number(document.getElementById('tri-dienGia').value)||3800;
+  const slNuoc = Number(document.getElementById('tri-slNguoi').value)||0;
+  const giaN = Number(document.getElementById('tri-donGiaNuoc').value)||50000;
+  const tienDien = (moi-cu)*giaD;
+  const tienNuoc = slNuoc*giaN;
+  const tienCoc = Number(document.getElementById('tri-tienCoc').value)||0;
+  const tienThue = Number(document.getElementById('tri-tienThue').value)||0;
+  const data = {
+    cosoId: selectedCosoId,
+    ngay, thang: ngay.slice(0,7),
+    phong, soHopDong: document.getElementById('tri-soHopDong').value,
+    kh: document.getElementById('tri-kh').value,
+    tienCoc, tienThue, sotien: tienThue,
+    dienCu: cu, dienMoi: moi, dienGia: giaD, tienDien,
+    nuocSL: slNuoc, nuocGia: giaN, tienNuoc,
+    hoaHong: Number(document.getElementById('tri-hoaHong').value)||0,
+    tongThu: tienCoc+tienThue+tienDien+tienNuoc,
+    loai: 'Tiền thuê',
+    createdAt: FieldValue.serverTimestamp(), createdBy: currentUser.uid
+  };
+  await db.collection('thu').add(data);
+  document.getElementById('thu-input-row')?.remove();
+  toast('Đã lưu','success');
 }
 
 // ===== KQKD =====
