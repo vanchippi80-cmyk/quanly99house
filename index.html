@@ -394,35 +394,15 @@ tr:hover td{background:#fafafa}
 
     <!-- KHACH IN/OUT TAB -->
     <div class="tab-pane" id="tab-khach-inout">
-      <div id="hethan-alert" class="alert-bar" style="display:none">⚠️ <span id="hethan-msg"></span></div>
-      <div class="tab-sub">
-        <button class="tab-sub-btn active" onclick="switchSubTab('kt-hientai',this)">Đang thuê</button>
-        <button class="tab-sub-btn" onclick="switchSubTab('kt-trong',this)">Phòng trống</button>
-        <button class="tab-sub-btn" onclick="switchSubTab('kt-lichsu',this)">Lịch sử in/out</button>
+      <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:12px">
+        <div class="stat-card green"><div class="lbl">Hiệu lực</div><div class="val" id="kt-s-hieuluc">—</div></div>
+        <div class="stat-card" style="background:#fff7ed;border-color:#fed7aa"><div class="lbl" style="color:#9a3412">Sắp hết hạn (&lt;15N)</div><div class="val" style="color:#c2410c" id="kt-s-sap">—</div></div>
+        <div class="stat-card red"><div class="lbl">Hết hạn</div><div class="val" id="kt-s-hethan">—</div></div>
       </div>
-      <div id="kt-hientai">
-        <div class="card">
-          <div class="card-header"><h3>Khách đang thuê</h3><span id="kt-count" style="font-size:11px;color:#6b7280"></span></div>
-          <table><thead><tr><th>Phòng</th><th>Khách thuê</th><th>SĐT</th><th>Giá thuê/tháng</th><th>Chỉ số điện mới nhất</th><th>Bắt đầu HĐ</th><th>Kết thúc HĐ</th><th>Trạng thái</th></tr></thead>
-          <tbody id="kt-table"></tbody></table>
-        </div>
-      </div>
-      <div id="kt-trong" style="display:none">
-        <div class="card">
-          <div class="card-header"><h3>Phòng trống</h3></div>
-          <table><thead><tr><th>Phòng</th><th>Tầng</th><th>Loại</th><th>Diện tích</th><th>Giá thuê</th></tr></thead>
-          <tbody id="trong-table"></tbody></table>
-        </div>
-      </div>
-      <div id="kt-lichsu" style="display:none">
-        <div style="display:flex;gap:8px;margin-bottom:16px">
-          <button class="btn btn-primary" onclick="openModal('modal-inout')">+ Ghi nhận in/out</button>
-        </div>
-        <div class="card">
-          <div class="card-header"><h3>Lịch sử khách in/out</h3><span id="inout-count" style="font-size:11px;color:#6b7280"></span></div>
-          <table><thead><tr><th>Ngày</th><th>Loại</th><th>Phòng</th><th>Khách thuê</th><th>SĐT</th><th>Ghi chú</th><th></th></tr></thead>
-          <tbody id="inout-table"></tbody></table>
-        </div>
+      <div class="card">
+        <div class="card-header"><h3>Khách đang thuê</h3><span id="kt-count" style="font-size:11px;color:#6b7280"></span></div>
+        <table><thead><tr><th>Phòng</th><th>Khách thuê</th><th>SĐT</th><th>Giá thuê/tháng</th><th>Bắt đầu HĐ</th><th>Kết thúc HĐ</th><th>Trạng thái</th><th>Ghi chú</th></tr></thead>
+        <tbody id="kt-table"></tbody></table>
       </div>
     </div>
 
@@ -2143,32 +2123,38 @@ function renderHopDong() {
 
 // ===== KHACH IN/OUT =====
 function renderKhachInOut() {
-  const occupied = cache.phong.filter(p=>p.tt==='Đang thuê'&&p.ten);
-  const empty = cache.phong.filter(p=>p.tt!=='Đang thuê'||!p.ten);
-  const expiring = occupied.filter(p=>p.ketthuc&&daysUntil(p.ketthuc)<=60&&daysUntil(p.ketthuc)>=0);
-  const expired = occupied.filter(p=>p.ketthuc&&daysUntil(p.ketthuc)<0);
-  const alertEl = document.getElementById('hethan-alert');
-  if(expiring.length||expired.length){ alertEl.style.display='flex'; document.getElementById('hethan-msg').textContent=`Sắp hết hạn: ${expiring.length} | Đã hết hạn: ${expired.length}`; }
-  else alertEl.style.display='none';
-  document.getElementById('kt-count').textContent = `${occupied.length} khách đang thuê`;
+  // Lấy danh sách phòng có khách (deduplicate: mỗi phòng lấy HĐ hiệu lực hoặc mới nhất)
+  const phongMap = new Map();
+  cache.phong.filter(p=>p.ten).forEach(p=>{
+    const prev = phongMap.get(p.so);
+    if(!prev) { phongMap.set(p.so, p); return; }
+    const dPrev = daysUntil(prev.ketthuc);
+    const dCur = daysUntil(p.ketthuc);
+    // ưu tiên HĐ còn hiệu lực, rồi đến HĐ mới nhất
+    if((dCur>=0 && dPrev<0) || (p.batdau||'')>(prev.batdau||'')) phongMap.set(p.so, p);
+  });
+  const occupied = [...phongMap.values()].sort((a,b)=>(a.so||'').localeCompare(b.so||''));
 
-  const lastMeter = {};
-  cache.thu.filter(t=>t.dienCu!=null).forEach(t=>{ if(!lastMeter[t.phong]||t.ngay>lastMeter[t.phong].ngay) lastMeter[t.phong]=t; });
+  const hieuluc = occupied.filter(p=>!p.ketthuc||daysUntil(p.ketthuc)>=0);
+  const sap = occupied.filter(p=>p.ketthuc&&daysUntil(p.ketthuc)>=0&&daysUntil(p.ketthuc)<15);
+  const hethan = occupied.filter(p=>p.ketthuc&&daysUntil(p.ketthuc)<0);
+
+  const setC = (id,v)=>{ const el=document.getElementById(id); if(el) el.textContent=v; };
+  setC('kt-s-hieuluc', hieuluc.length);
+  setC('kt-s-sap', sap.length);
+  setC('kt-s-hethan', hethan.length);
+  setC('kt-count', `${occupied.length} khách đang thuê`);
 
   const rows = occupied.map(p=>{
     const days = daysUntil(p.ketthuc);
     let badge = '<span class="badge bg">Hiệu lực</span>';
-    if(p.ketthuc){ if(days<0) badge='<span class="badge br">Hết hạn</span>'; else if(days<=30) badge=`<span class="badge bo">Còn ${days}N</span>`; }
-    const meter = lastMeter[p.so];
+    if(p.ketthuc){ if(days<0) badge='<span class="badge br">Hết hạn</span>'; else if(days<15) badge=`<span class="badge bo">Còn ${days}N</span>`; else if(days<=60) badge=`<span class="badge bb">Còn ${days}N</span>`; }
     return `<tr><td><b>${p.so}</b></td><td>${p.ten}</td><td>${p.sdt||''}</td>
       <td>${fmt(p.gia)}</td>
-      <td>${meter?`${fmtNum(meter.dienMoi)} (${meter.ngay})`:'—'}</td>
-      <td>${p.batdau||''}</td><td>${p.ketthuc||''}</td><td>${badge}</td></tr>`;
+      <td>${p.batdau||''}</td><td>${p.ketthuc||''}</td><td>${badge}</td>
+      <td>${p.ghiChu||p.ghichu||''}</td></tr>`;
   }).join('');
   document.getElementById('kt-table').innerHTML = rows || `<tr><td colspan="8"><div class="empty"><div class="icon">👥</div><p>Chưa có khách thuê</p></div></td></tr>`;
-
-  const emptyRows = empty.map(p=>`<tr><td><b>${p.so}</b></td><td>${p.tang||''}</td><td>${p.loai||''}</td><td>${p.dt||''}m²</td><td>${fmt(p.gia)}</td></tr>`).join('');
-  document.getElementById('trong-table').innerHTML = emptyRows || '<tr><td colspan="5" class="empty"><p>Không có phòng trống</p></td></tr>';
 }
 function renderInOut() {
   const rows = [...cache.inout].sort((a,b)=>(b.ngay||'').localeCompare(a.ngay||'')).map(io=>{
