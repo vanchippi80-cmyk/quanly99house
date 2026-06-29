@@ -1682,7 +1682,46 @@ function renderThu() {
   if(thAction) thAction.textContent = canEdit?'Xử lý':'';
 
   const td = (v,style='') => `<td style="text-align:right;padding:5px 8px;border-bottom:1px solid #f3f4f6;${style}">${v??''}</td>`;
+  const phongOptsFor = (sel) => cache.phong
+    .filter((p,i,arr)=>arr.findIndex(x=>x.so===p.so)===i)
+    .sort((a,b)=>(a.so||'').localeCompare(b.so||''))
+    .map(p=>`<option value="${p.so}"${p.so===sel?' selected':''}>${p.so}</option>`).join('');
+  const inpE = (fid,type,val) =>
+    `<input id="tre-${fid}" type="${type}" value="${val??''}" style="width:100%;padding:3px 5px;border:1px solid #d1d5db;border-radius:4px;font-size:11px" oninput="calcThuEditRow()">`;
+
   const rows = thuM.map(t => {
+    if(t.id === editingThuId) {
+      // EDIT ROW
+      const bg = '#fffbeb';
+      return `<tr id="thu-edit-row">
+        <td style="position:sticky;left:0;background:${bg};z-index:5;padding:4px 6px;border-bottom:1px solid #f3f4f6;border-right:1px solid #e5e7eb">
+          <input id="tre-ngay" type="date" value="${t.ngay||''}" style="width:100%;padding:3px 5px;border:1px solid #d1d5db;border-radius:4px;font-size:11px">
+        </td>
+        <td style="position:sticky;left:110px;background:${bg};z-index:5;padding:4px 6px;border-bottom:1px solid #f3f4f6;border-right:2px solid #e5e7eb">
+          <select id="tre-phong" onchange="onThuEditPhongChange()" style="width:100%;padding:3px;border:1px solid #d1d5db;border-radius:4px;font-size:11px">
+            <option value="">--</option>${phongOptsFor(t.phong)}
+          </select>
+        </td>
+        <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6"><input id="tre-soHopDong" type="text" value="${t.soHopDong||''}" onchange="onThuEditHDChange()" style="width:100%;padding:3px 5px;border:1px solid #d1d5db;border-radius:4px;font-size:11px"></td>
+        <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6"><input id="tre-kh" type="text" value="${(t.kh||t.ten||'').replace(/"/g,'&quot;')}" style="width:100%;padding:3px 5px;border:1px solid #d1d5db;border-radius:4px;font-size:11px"></td>
+        <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6">${inpE('tienCoc','number',t.tienCoc||0)}</td>
+        <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6">${inpE('tienThue','number',t.tienThue||t.sotien||0)}</td>
+        <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6">${inpE('dienCu','number',t.dienCu||0)}</td>
+        <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6">${inpE('dienMoi','number',t.dienMoi||0)}</td>
+        <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6;text-align:right;color:#6b7280"><span id="tre-sd">0</span></td>
+        <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6">${inpE('dienGia','number',t.dienGia||3800)}</td>
+        <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6;text-align:right;font-weight:700"><span id="tre-tienDien">0</span></td>
+        <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6">${inpE('slNguoi','number',t.nuocSL||0)}</td>
+        <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6">${inpE('donGiaNuoc','number',t.nuocGia||50000)}</td>
+        <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6;text-align:right;font-weight:700"><span id="tre-tienNuoc">0</span></td>
+        <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6;text-align:right;font-weight:700;color:#059669"><span id="tre-tong">0</span></td>
+        <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6">${inpE('hoaHong','number',t.hoaHong||0)}</td>
+        <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6;white-space:nowrap">
+          <button class="btn btn-primary btn-sm" onclick="saveThuEdit('${t.id}')">💾</button>
+          <button class="btn btn-secondary btn-sm" onclick="editingThuId=null;renderThu()">✕</button>
+        </td>
+      </tr>`;
+    }
     const sd = thuSd(t);
     const tong = thuTongThu(t);
     return `<tr>
@@ -1703,12 +1742,13 @@ function renderThu() {
       ${td(tong?`<b style="color:#059669">${fmt(tong)}</b>`:'')}
       ${td(t.hoaHong?fmt(t.hoaHong):'')}
       <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6;white-space:nowrap">
-        ${canEdit?`<button class="btn btn-secondary btn-sm" onclick="editThuRow('${t.id}')">Sửa</button> <button class="btn btn-danger btn-sm" onclick="deleteThu('${t.id}')">Xoá</button>`:''}
+        ${canEdit?`<button class="btn btn-secondary btn-sm" onclick="editingThuId='${t.id}';renderThu()">Sửa</button> <button class="btn btn-danger btn-sm" onclick="deleteThu('${t.id}')">Xoá</button>`:''}
       </td>
     </tr>`;
   }).join('');
   document.getElementById('thu-table').innerHTML = rows ||
     `<tr><td colspan="17" style="text-align:center;padding:24px;color:#9ca3af">Chưa có khoản thu tháng ${thang}</td></tr>`;
+  if(editingThuId) setTimeout(calcThuEditRow, 0);
 }
 
 async function deleteThu(id) {
@@ -1716,65 +1756,9 @@ async function deleteThu(id) {
   await db.collection('thu').doc(id).delete(); toast('Đã xoá','success');
 }
 
-function editThuRow(id) {
-  const t = cache.thu.find(x=>x.id===id);
-  if(!t) return;
-  // Xoá row nhập đang mở (nếu có)
-  document.getElementById('thu-input-row')?.remove();
-  document.getElementById('thu-edit-row-'+id)?.remove();
+let editingThuId = null;
 
-  const phongOpts = cache.phong
-    .filter((p,i,arr)=>arr.findIndex(x=>x.so===p.so)===i)
-    .sort((a,b)=>(a.so||'').localeCompare(b.so||''))
-    .map(p=>`<option value="${p.so}"${p.so===t.phong?' selected':''}>${p.so}</option>`).join('');
-
-  const inp = (fid,type,val,style='') =>
-    `<input id="tre-${fid}" type="${type}" value="${val??''}" style="width:100%;padding:3px 5px;border:1px solid #d1d5db;border-radius:4px;font-size:11px;${style}" oninput="calcThuEditRow('${id}')">`;
-
-  // Tìm <tr> hiện tại và thay bằng row edit
-  const tbody = document.getElementById('thu-table');
-  const existingRows = tbody.querySelectorAll('tr');
-  let targetRow = null;
-  existingRows.forEach(tr => {
-    if(tr.innerHTML.includes(`editThuRow('${id}')`)) targetRow = tr;
-  });
-  if(!targetRow) return;
-
-  const editRow = document.createElement('tr');
-  editRow.id = 'thu-edit-row-'+id;
-  editRow.style.background = '#fffbeb';
-  editRow.innerHTML = `
-    <td style="position:sticky;left:0;background:#fffbeb;z-index:5;padding:4px 6px;border-right:1px solid #e5e7eb">
-      <input id="tre-ngay" type="date" value="${t.ngay||''}" style="width:100%;padding:3px 5px;border:1px solid #d1d5db;border-radius:4px;font-size:11px">
-    </td>
-    <td style="position:sticky;left:110px;background:#fffbeb;z-index:5;padding:4px 6px;border-right:2px solid #e5e7eb">
-      <select id="tre-phong" style="width:100%;padding:3px;border:1px solid #d1d5db;border-radius:4px;font-size:11px">
-        <option value="">--</option>${phongOpts}
-      </select>
-    </td>
-    <td style="padding:4px 6px">${inp('soHopDong','text',t.soHopDong)}</td>
-    <td style="padding:4px 6px">${inp('kh','text',t.kh||t.ten)}</td>
-    <td style="padding:4px 6px">${inp('tienCoc','number',t.tienCoc||0)}</td>
-    <td style="padding:4px 6px">${inp('tienThue','number',t.tienThue||t.sotien||0)}</td>
-    <td style="padding:4px 6px">${inp('dienCu','number',t.dienCu||0)}</td>
-    <td style="padding:4px 6px">${inp('dienMoi','number',t.dienMoi||0)}</td>
-    <td style="padding:4px 6px;text-align:right;font-size:11px;color:#6b7280"><span id="tre-sd-${id}">0</span></td>
-    <td style="padding:4px 6px">${inp('dienGia','number',t.dienGia||t.dienGia||3800)}</td>
-    <td style="padding:4px 6px;font-weight:700;text-align:right"><span id="tre-tienDien-${id}">0</span></td>
-    <td style="padding:4px 6px">${inp('slNguoi','number',t.nuocSL||0)}</td>
-    <td style="padding:4px 6px">${inp('donGiaNuoc','number',t.nuocGia||50000)}</td>
-    <td style="padding:4px 6px;font-weight:700;text-align:right"><span id="tre-tienNuoc-${id}">0</span></td>
-    <td style="padding:4px 6px;font-weight:700;color:#059669;text-align:right"><span id="tre-tong-${id}">0</span></td>
-    <td style="padding:4px 6px">${inp('hoaHong','number',t.hoaHong||0)}</td>
-    <td style="padding:4px 6px;white-space:nowrap">
-      <button class="btn btn-primary btn-sm" onclick="saveThuEdit('${id}')">💾</button>
-      <button class="btn btn-secondary btn-sm" onclick="renderThu()">✕</button>
-    </td>`;
-  targetRow.replaceWith(editRow);
-  calcThuEditRow(id);
-}
-
-function calcThuEditRow(id) {
+function calcThuEditRow() {
   const cu = Number(document.getElementById('tre-dienCu')?.value)||0;
   const moi = Number(document.getElementById('tre-dienMoi')?.value)||0;
   const gia = Number(document.getElementById('tre-dienGia')?.value)||3800;
@@ -1785,10 +1769,35 @@ function calcThuEditRow(id) {
   const tienThue = Number(document.getElementById('tre-tienThue')?.value)||0;
   const tong = tienCoc+tienThue+tienDien+tienNuoc;
   const el = s => document.getElementById(s);
-  if(el(`tre-sd-${id}`)) el(`tre-sd-${id}`).textContent = sd||0;
-  if(el(`tre-tienDien-${id}`)) el(`tre-tienDien-${id}`).textContent = fmtNum(tienDien);
-  if(el(`tre-tienNuoc-${id}`)) el(`tre-tienNuoc-${id}`).textContent = fmtNum(tienNuoc);
-  if(el(`tre-tong-${id}`)) el(`tre-tong-${id}`).textContent = fmtNum(tong);
+  if(el('tre-sd')) el('tre-sd').textContent = sd||0;
+  if(el('tre-tienDien')) el('tre-tienDien').textContent = fmtNum(tienDien);
+  if(el('tre-tienNuoc')) el('tre-tienNuoc').textContent = fmtNum(tienNuoc);
+  if(el('tre-tong')) el('tre-tong').textContent = fmtNum(tong);
+}
+
+function onThuEditPhongChange() {
+  const so = document.getElementById('tre-phong')?.value;
+  if(!so) return;
+  const contracts = cache.phong.filter(p=>p.so===so && p.soHopDong)
+    .sort((a,b)=>(b.batdau||'').localeCompare(a.batdau||''));
+  const latest = contracts[0];
+  if(latest) {
+    const hdEl = document.getElementById('tre-soHopDong');
+    const khEl = document.getElementById('tre-kh');
+    if(hdEl && !hdEl.value) hdEl.value = latest.soHopDong||'';
+    if(khEl && !khEl.value) khEl.value = latest.ten||'';
+  }
+}
+
+function onThuEditHDChange() {
+  const hd = document.getElementById('tre-soHopDong')?.value;
+  const phong = document.getElementById('tre-phong')?.value;
+  if(!hd) return;
+  const contract = cache.phong.find(p=>p.soHopDong===hd && (!phong || p.so===phong));
+  if(contract) {
+    const khEl = document.getElementById('tre-kh');
+    if(khEl) khEl.value = contract.ten||'';
+  }
 }
 
 async function saveThuEdit(id) {
@@ -1841,8 +1850,8 @@ function addThuRow() {
         <option value="">--</option>${phongOpts}
       </select>
     </td>
-    <td style="padding:4px 6px">${inp('soHopDong')}</td>
-    <td style="padding:4px 6px">${inp('kh')}</td>
+    <td style="padding:4px 6px"><input id="tri-soHopDong" type="text" placeholder="" onchange="onThuRowHDChange()" style="width:100%;padding:3px 5px;border:1px solid #d1d5db;border-radius:4px;font-size:11px"></td>
+    <td style="padding:4px 6px"><input id="tri-kh" type="text" placeholder="" style="width:100%;padding:3px 5px;border:1px solid #d1d5db;border-radius:4px;font-size:11px"></td>
     <td style="padding:4px 6px">${inp('tienCoc','number','0')}</td>
     <td style="padding:4px 6px">${inp('tienThue','number','0')}</td>
     <td style="padding:4px 6px">${inp('dienCu','number','0')}</td>
@@ -1877,6 +1886,16 @@ function onThuRowPhongChange() {
     if(!document.getElementById('tri-slNguoi').value) document.getElementById('tri-slNguoi').value = latest.slKhach||'';
   }
   calcThuRow();
+}
+function onThuRowHDChange() {
+  const hd = document.getElementById('tri-soHopDong')?.value;
+  const phong = document.getElementById('tri-phong')?.value;
+  if(!hd) return;
+  const contract = cache.phong.find(p=>p.soHopDong===hd && (!phong||p.so===phong));
+  if(contract) {
+    const khEl = document.getElementById('tri-kh');
+    if(khEl) khEl.value = contract.ten||'';
+  }
 }
 
 function calcThuRow() {
