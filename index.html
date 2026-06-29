@@ -2609,20 +2609,38 @@ async function saveQuanLyPhong() {
     tt:document.getElementById('qp-tt').value,
     updatedAt:FieldValue.serverTimestamp()
   };
-  if(editId) { await db.collection('phong').doc(editId).update(data); toast('Đã cập nhật phòng','success'); }
-  else { await db.collection('phong').add({...data, cosoId:selectedCosoId, createdAt:FieldValue.serverTimestamp(), createdBy:currentUser.uid}); toast('Đã thêm phòng','success'); }
+  if(editId) {
+    await db.collection('phong').doc(editId).update(data);
+    toast('Đã cập nhật phòng','success');
+  } else {
+    const duplicate = cache.phong.find(p => p.so === so && p.cosoId === selectedCosoId);
+    if(duplicate) { toast(`Phòng ${so} đã tồn tại trong danh mục`,'error'); return; }
+    await db.collection('phong').add({...data, cosoId:selectedCosoId, createdAt:FieldValue.serverTimestamp(), createdBy:currentUser.uid});
+    toast('Đã thêm phòng','success');
+  }
   document.getElementById('ql-phong-add-row').style.display='none';
   document.getElementById('ql-phong-add-row').dataset.editId='';
   ['so','tang','dt','gia','giaDien','giaNuoc'].forEach(k=>{const el=document.getElementById('qp-'+k);if(el)el.value='';});
 }
 function renderQlPhong() {
   const canEdit=['owner','manager'].includes(currentRole);
-  const rows = cache.phong.sort((a,b)=>(a.so||'').localeCompare(b.so||'')).map(p=>{
-    return `<tr><td><b>${p.so}</b></td><td>${p.tang||''}</td><td>${p.loai||''}</td>
+  const rows = [...cache.phong].sort((a,b)=>(a.so||'').localeCompare(b.so||'')).map(p=>{
+    const hasContract = p.ten || p.soHopDong;
+    return `<tr>
+      <td><b>${p.so}</b></td><td>${p.tang||''}</td><td>${p.loai||''}</td>
       <td>${p.dt||''}${p.dt?'m²':''}</td>
-      <td>${canEdit?`<button class="btn btn-secondary btn-sm" onclick="editQlPhong('${p.id}')">✏️</button>`:''}</td></tr>`;
+      <td style="display:flex;gap:4px">
+        ${canEdit?`<button class="btn btn-secondary btn-sm" onclick="editQlPhong('${p.id}')" title="Sửa">✏️</button>`:''}
+        ${canEdit&&!hasContract?`<button class="btn btn-secondary btn-sm" onclick="deleteQlPhong('${p.id}','${p.so}')" title="Xóa" style="color:#dc2626">🗑️</button>`:''}
+      </td>
+    </tr>`;
   }).join('');
-  const tb=document.getElementById('ql-phong-table'); if(tb) tb.innerHTML=rows||'<tr><td colspan="9" style="text-align:center;color:#9ca3af">Chưa có phòng nào</td></tr>';
+  const tb=document.getElementById('ql-phong-table'); if(tb) tb.innerHTML=rows||'<tr><td colspan="5" style="text-align:center;color:#9ca3af">Chưa có phòng nào</td></tr>';
+}
+async function deleteQlPhong(id, so) {
+  if(!confirm(`Xóa phòng ${so}? Chỉ xóa được phòng chưa có hợp đồng.`)) return;
+  await db.collection('phong').doc(id).delete();
+  toast(`Đã xóa phòng ${so}`,'success');
 }
 function editQlPhong(id) {
   const p=cache.phong.find(x=>x.id===id); if(!p) return;
