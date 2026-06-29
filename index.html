@@ -585,13 +585,13 @@ tr:hover td{background:#fafafa}
 <!-- Modal Quản lý phòng (danh mục) -->
 <div class="modal-overlay" id="modal-ql-phong">
   <div class="modal" style="width:700px;max-width:98vw">
-    <div class="modal-header"><h3>🚪 Quản lý phòng</h3><button class="modal-close" onclick="closeModal('modal-ql-phong')">✕</button></div>
+    <div class="modal-header"><h3>🚪 Danh sách phòng</h3><button class="modal-close" onclick="closeModal('modal-ql-phong')">✕</button></div>
     <div class="modal-body">
       <div style="display:flex;gap:8px;margin-bottom:12px">
         <button class="btn btn-primary btn-sm" onclick="showAddPhongRow()">+ Thêm phòng</button>
       </div>
       <table style="font-size:12px">
-        <thead><tr><th>Phòng</th><th>Tầng</th><th>Loại</th><th>DT (m²)</th><th>Giá thuê</th><th>Giá điện</th><th>Giá nước</th><th>Trạng thái</th><th></th></tr></thead>
+        <thead><tr><th>Phòng</th><th>Tầng</th><th>Loại</th><th>DT (m²)</th><th></th></tr></thead>
         <tbody id="ql-phong-table"></tbody>
       </table>
       <div id="ql-phong-add-row" style="display:none;margin-top:12px;padding:12px;background:#f9fafb;border-radius:8px;border:1px solid #e5e7eb">
@@ -604,14 +604,8 @@ tr:hover td{background:#fafafa}
           </div>
           <div class="form-group"><label>Diện tích (m²)</label><input type="number" id="qp-dt"></div>
         </div>
-        <div class="form-row">
-          <div class="form-group"><label>Giá thuê *</label><input type="number" id="qp-gia"></div>
-          <div class="form-group"><label>Giá điện (đ/số)</label><input type="number" id="qp-giaDien"></div>
-          <div class="form-group"><label>Giá nước (đ/m³)</label><input type="number" id="qp-giaNuoc"></div>
-          <div class="form-group"><label>Trạng thái</label>
-            <select id="qp-tt"><option value="Trống">Trống</option><option value="Đang thuê">Đang thuê</option></select>
-          </div>
-        </div>
+        <!-- hidden fields kept for data compatibility -->
+        <input type="hidden" id="qp-gia"><input type="hidden" id="qp-giaDien"><input type="hidden" id="qp-giaNuoc"><input type="hidden" id="qp-tt" value="Trống">
         <div style="display:flex;gap:8px">
           <button class="btn btn-primary btn-sm" onclick="saveQuanLyPhong()">Lưu phòng</button>
           <button class="btn btn-secondary btn-sm" onclick="document.getElementById('ql-phong-add-row').style.display='none'">Hủy</button>
@@ -1920,7 +1914,9 @@ function renderHopDong() {
     const btn2=document.getElementById('btn-ql-phong'); if(btn2) btn2.style.display='';
   }
 
-  const sorted = [...cache.phong].sort((a,b)=>(a.so||'').localeCompare(b.so||''));
+  const sorted = [...cache.phong]
+    .filter(p => p.ten || p.soHopDong || (p.phuLuc && p.phuLuc.length))
+    .sort((a,b)=>(a.so||'').localeCompare(b.so||''));
   let rows = '';
   sorted.forEach(p => {
     // Main contract row
@@ -2616,12 +2612,8 @@ async function saveQuanLyPhong() {
 function renderQlPhong() {
   const canEdit=['owner','manager'].includes(currentRole);
   const rows = cache.phong.sort((a,b)=>(a.so||'').localeCompare(b.so||'')).map(p=>{
-    const badge=p.tt==='Đang thuê'?'<span class="badge bg">Đang thuê</span>':'<span class="badge bgr">Trống</span>';
     return `<tr><td><b>${p.so}</b></td><td>${p.tang||''}</td><td>${p.loai||''}</td>
-      <td>${p.dt||''}${p.dt?'m²':''}</td><td style="text-align:right">${p.gia?fmt(p.gia):''}</td>
-      <td style="text-align:right">${p.giaDien?fmt(p.giaDien):''}</td>
-      <td style="text-align:right">${p.giaNuoc?fmt(p.giaNuoc):''}</td>
-      <td>${badge}</td>
+      <td>${p.dt||''}${p.dt?'m²':''}</td>
       <td>${canEdit?`<button class="btn btn-secondary btn-sm" onclick="editQlPhong('${p.id}')">✏️</button>`:''}</td></tr>`;
   }).join('');
   const tb=document.getElementById('ql-phong-table'); if(tb) tb.innerHTML=rows||'<tr><td colspan="9" style="text-align:center;color:#9ca3af">Chưa có phòng nào</td></tr>';
