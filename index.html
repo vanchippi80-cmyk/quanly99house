@@ -1801,28 +1801,33 @@ function onThuEditHDChange() {
 }
 
 async function saveThuEdit(id) {
-  const ngay = document.getElementById('tre-ngay').value;
-  const phong = document.getElementById('tre-phong').value;
+  const ngay = document.getElementById('tre-ngay')?.value;
+  const phong = document.getElementById('tre-phong')?.value;
   if(!ngay||!phong) { toast('Chọn phòng và ngày','error'); return; }
-  const cu = Number(document.getElementById('tre-dienCu').value)||0;
-  const moi = Number(document.getElementById('tre-dienMoi').value)||0;
-  const giaD = Number(document.getElementById('tre-dienGia').value)||3800;
-  const sl = Number(document.getElementById('tre-slNguoi').value)||0;
-  const giaN = Number(document.getElementById('tre-donGiaNuoc').value)||50000;
+  const cu = Number(document.getElementById('tre-dienCu')?.value)||0;
+  const moi = Number(document.getElementById('tre-dienMoi')?.value)||0;
+  const giaD = Number(document.getElementById('tre-dienGia')?.value)||3800;
+  const sl = Number(document.getElementById('tre-slNguoi')?.value)||0;
+  const giaN = Number(document.getElementById('tre-donGiaNuoc')?.value)||50000;
   const tienDien = (moi-cu)*giaD, tienNuoc = sl*giaN;
-  const tienCoc = Number(document.getElementById('tre-tienCoc').value)||0;
-  const tienThue = Number(document.getElementById('tre-tienThue').value)||0;
-  await db.collection('thu').doc(id).update({
-    ngay, thang: ngay.slice(0,7), phong,
-    soHopDong: document.getElementById('tre-soHopDong').value,
-    kh: document.getElementById('tre-kh').value,
-    tienCoc, tienThue, sotien: tienThue,
-    dienCu: cu, dienMoi: moi, dienGia: giaD, tienDien,
-    nuocSL: sl, nuocGia: giaN, tienNuoc,
-    hoaHong: Number(document.getElementById('tre-hoaHong').value)||0,
-    tongThu: tienCoc+tienThue+tienDien+tienNuoc,
-  });
-  toast('Đã cập nhật','success');
+  const tienCoc = Number(document.getElementById('tre-tienCoc')?.value)||0;
+  const tienThue = Number(document.getElementById('tre-tienThue')?.value)||0;
+  const hoaHong = Number(document.getElementById('tre-hoaHong')?.value)||0;
+  const soHopDong = document.getElementById('tre-soHopDong')?.value||'';
+  const kh = document.getElementById('tre-kh')?.value||'';
+  try {
+    await db.collection('thu').doc(id).update({
+      ngay, thang: ngay.slice(0,7), phong, soHopDong, kh,
+      tienCoc, tienThue, sotien: tienThue,
+      dienCu: cu, dienMoi: moi, dienGia: giaD, tienDien,
+      nuocSL: sl, nuocGia: giaN, tienNuoc, hoaHong,
+      tongThu: tienCoc+tienThue+tienDien+tienNuoc,
+    });
+    editingThuId = null;
+    toast('Đã cập nhật','success');
+  } catch(e) {
+    toast('Lỗi: '+e.message,'error');
+  }
 }
 
 function addThuRow() {
