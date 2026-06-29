@@ -414,36 +414,6 @@ tr:hover td{background:#fafafa}
       </div>
     </div>
 
-    <!-- CONG NO TAB -->
-    <div class="tab-pane" id="tab-cong-no">
-      <div style="display:flex;gap:8px;margin-bottom:16px">
-        <button class="btn btn-primary" id="btn-add-no" onclick="openModal('modal-no')">+ Ghi nhận công nợ</button>
-      </div>
-      <div class="card">
-        <div class="card-header"><h3>Danh sách công nợ</h3><span id="no-total" style="font-size:11px;color:#dc2626;font-weight:700"></span></div>
-        <table><thead><tr><th>Phòng</th><th>Khách thuê</th><th>SĐT</th><th>Giá thuê</th><th>Tháng nợ</th><th>Tổng nợ</th><th>Ghi chú</th><th></th></tr></thead>
-        <tbody id="no-table"></tbody></table>
-      </div>
-    </div>
-
-    <!-- HOA HONG TAB -->
-    <div class="tab-pane" id="tab-hoa-hong">
-      <div style="display:flex;gap:8px;margin-bottom:16px">
-        <button class="btn btn-primary" id="btn-add-hoahong" onclick="openModal('modal-hoahong')">+ Ghi nhận hoa hồng</button>
-      </div>
-      <div class="card">
-        <div class="card-header">
-          <h3 id="hh-header">Hoa hồng tháng</h3>
-          <div style="display:flex;gap:8px;align-items:center">
-            <input type="month" class="tab-month-input" onchange="updateGlobalMonth(this.value)" style="padding:5px 8px;border-radius:7px;border:1.5px solid #e5e7eb;font-size:12px;cursor:pointer">
-            <span id="hh-total" style="font-size:11px;color:#7c3aed;font-weight:700"></span>
-          </div>
-        </div>
-        <table><thead><tr><th>Ngày</th><th>Tháng</th><th>Sale</th><th>Phòng</th><th>Số tiền</th><th>Ghi chú</th><th></th></tr></thead>
-        <tbody id="hoahong-table"></tbody></table>
-      </div>
-    </div>
-
     <!-- TAI SAN TAB -->
     <div class="tab-pane" id="tab-taisan">
       <div style="display:flex;gap:8px;margin-bottom:16px;align-items:center;flex-wrap:wrap">
@@ -738,48 +708,6 @@ tr:hover td{background:#fafafa}
   </div>
 </div>
 
-<!-- Modal Cong No -->
-<div class="modal-overlay" id="modal-no">
-  <div class="modal" style="width:420px">
-    <div class="modal-header"><h3>⚠️ Ghi nhận công nợ</h3><button class="modal-close" onclick="closeModal('modal-no')">✕</button></div>
-    <div class="modal-body">
-      <div class="form-group"><label>Phòng *</label><select id="n-phong"></select></div>
-      <div class="form-row">
-        <div class="form-group"><label>Số tháng nợ</label><input type="number" id="n-thang" value="1" min="1"></div>
-        <div class="form-group"><label>Tổng nợ (đ)</label><input type="number" id="n-sotien" placeholder="Để trống = tự tính"></div>
-      </div>
-      <div class="form-group"><label>Ghi chú</label><input type="text" id="n-ghichu"></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('modal-no')">Hủy</button>
-      <button class="btn btn-primary" onclick="saveNo()">Lưu công nợ</button>
-    </div>
-  </div>
-</div>
-
-<!-- Modal Hoa Hong -->
-<div class="modal-overlay" id="modal-hoahong">
-  <div class="modal" style="width:440px">
-    <div class="modal-header"><h3>🤝 Ghi nhận hoa hồng</h3><button class="modal-close" onclick="closeModal('modal-hoahong')">✕</button></div>
-    <div class="modal-body">
-      <div class="form-row">
-        <div class="form-group"><label>Ngày *</label><input type="date" id="hh-ngay"></div>
-        <div class="form-group"><label>Tháng *</label><input type="month" id="hh-thang"></div>
-      </div>
-      <div class="form-row">
-        <div class="form-group"><label>Tên Sale *</label><input type="text" id="hh-sale" placeholder="Tên nhân viên"></div>
-        <div class="form-group"><label>Phòng liên quan</label><input type="text" id="hh-phong" placeholder="T1, T2..."></div>
-      </div>
-      <div class="form-group"><label>Số tiền hoa hồng (đ) *</label><input type="number" id="hh-sotien" placeholder="1000000"></div>
-      <div class="form-group"><label>Ghi chú</label><input type="text" id="hh-ghichu"></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('modal-hoahong')">Hủy</button>
-      <button class="btn btn-primary" onclick="saveHoaHong()">Lưu hoa hồng</button>
-    </div>
-  </div>
-</div>
-
 <!-- Modal Tai San -->
 <div class="modal-overlay" id="modal-taisan">
   <div class="modal">
@@ -917,8 +845,6 @@ const NAV_CONFIG = {
     {id:'hop-dong',icon:'📋',label:'Hợp đồng'},
     {id:'khach-inout',icon:'👥',label:'Khách in/out'},
     {id:'thu-tien',icon:'💰',label:'Thu tiền'},
-    {id:'cong-no',icon:'⚠️',label:'Công nợ'},
-    {id:'hoa-hong',icon:'🤝',label:'Hoa hồng'},
     {id:'taisan',icon:'🏷️',label:'Tài sản'},
     {section:'ADMIN'},
     {id:'co-so',icon:'🏢',label:'Cơ sở'},
@@ -929,8 +855,6 @@ const NAV_CONFIG = {
     {id:'hop-dong',icon:'📋',label:'Hợp đồng'},
     {id:'khach-inout',icon:'👥',label:'Khách in/out'},
     {id:'thu-tien',icon:'💰',label:'Thu tiền'},
-    {id:'cong-no',icon:'⚠️',label:'Công nợ'},
-    {id:'hoa-hong',icon:'🤝',label:'Hoa hồng'},
   ],
   manager: [
     {section:'TÀI CHÍNH'},
@@ -941,7 +865,6 @@ const NAV_CONFIG = {
     {id:'hop-dong',icon:'📋',label:'Hợp đồng'},
     {id:'khach-inout',icon:'👥',label:'Khách in/out'},
     {id:'thu-tien',icon:'💰',label:'Thu tiền'},
-    {id:'cong-no',icon:'⚠️',label:'Công nợ'},
     {id:'taisan',icon:'🏷️',label:'Tài sản'},
   ]
 };
@@ -1093,8 +1016,8 @@ function switchTab(tabId) {
   const navItem = document.querySelector(`.nav-item[data-tab="${tabId}"]`);
   if (navItem) navItem.classList.add('active');
   const titles = {bank:'Bank – Sao kê','thu-tien':'Thu tiền',kqkd:'Báo cáo KQKD',
-    'hop-dong':'Hợp đồng','khach-inout':'Khách in/out','cong-no':'Công nợ',
-    'hoa-hong':'Hoa hồng',taisan:'Tài sản','co-so':'Cơ sở',users:'Người dùng'};
+    'hop-dong':'Hợp đồng','khach-inout':'Khách in/out',
+    taisan:'Tài sản','co-so':'Cơ sở',users:'Người dùng'};
   document.getElementById('tabTitle').textContent = titles[tabId]||tabId;
   renderAll();
 }
