@@ -1690,41 +1690,9 @@ function renderThu() {
     `<input id="tre-${fid}" type="${type}" value="${val??''}" style="width:100%;padding:3px 5px;border:1px solid #d1d5db;border-radius:4px;font-size:11px" oninput="calcThuEditRow()">`;
 
   const rows = thuM.map(t => {
-    if(t.id === editingThuId) {
-      // EDIT ROW
-      const bg = '#fffbeb';
-      return `<tr id="thu-edit-row">
-        <td style="position:sticky;left:0;background:${bg};z-index:5;padding:4px 6px;border-bottom:1px solid #f3f4f6;border-right:1px solid #e5e7eb">
-          <input id="tre-ngay" type="date" value="${t.ngay||''}" style="width:100%;padding:3px 5px;border:1px solid #d1d5db;border-radius:4px;font-size:11px">
-        </td>
-        <td style="position:sticky;left:110px;background:${bg};z-index:5;padding:4px 6px;border-bottom:1px solid #f3f4f6;border-right:2px solid #e5e7eb">
-          <select id="tre-phong" onchange="onThuEditPhongChange()" style="width:100%;padding:3px;border:1px solid #d1d5db;border-radius:4px;font-size:11px">
-            <option value="">--</option>${phongOptsFor(t.phong)}
-          </select>
-        </td>
-        <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6"><input id="tre-soHopDong" type="text" value="${t.soHopDong||''}" onchange="onThuEditHDChange()" style="width:100%;padding:3px 5px;border:1px solid #d1d5db;border-radius:4px;font-size:11px"></td>
-        <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6"><input id="tre-kh" type="text" value="${(t.kh||t.ten||'').replace(/"/g,'&quot;')}" style="width:100%;padding:3px 5px;border:1px solid #d1d5db;border-radius:4px;font-size:11px"></td>
-        <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6">${inpE('tienCoc','number',t.tienCoc||0)}</td>
-        <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6">${inpE('tienThue','number',t.tienThue||t.sotien||0)}</td>
-        <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6">${inpE('dienCu','number',t.dienCu||0)}</td>
-        <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6">${inpE('dienMoi','number',t.dienMoi||0)}</td>
-        <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6;text-align:right;color:#6b7280"><span id="tre-sd">0</span></td>
-        <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6">${inpE('dienGia','number',t.dienGia||3800)}</td>
-        <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6;text-align:right;font-weight:700"><span id="tre-tienDien">0</span></td>
-        <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6">${inpE('slNguoi','number',t.nuocSL||0)}</td>
-        <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6">${inpE('donGiaNuoc','number',t.nuocGia||50000)}</td>
-        <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6;text-align:right;font-weight:700"><span id="tre-tienNuoc">0</span></td>
-        <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6;text-align:right;font-weight:700;color:#059669"><span id="tre-tong">0</span></td>
-        <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6">${inpE('hoaHong','number',t.hoaHong||0)}</td>
-        <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6;white-space:nowrap">
-          <button class="btn btn-primary btn-sm" onclick="saveThuEdit('${t.id}')">💾</button>
-          <button class="btn btn-secondary btn-sm" onclick="editingThuId=null;renderThu()">✕</button>
-        </td>
-      </tr>`;
-    }
     const sd = thuSd(t);
     const tong = thuTongThu(t);
-    return `<tr>
+    return `<tr data-thu-id="${t.id}">
       <td style="position:sticky;left:0;background:#fff;z-index:5;padding:5px 8px;border-bottom:1px solid #f3f4f6;border-right:1px solid #e5e7eb">${t.ngay||''}</td>
       <td style="position:sticky;left:110px;background:#fff;z-index:5;padding:5px 8px;border-bottom:1px solid #f3f4f6;border-right:2px solid #e5e7eb"><b>${t.phong||''}</b></td>
       ${td(t.soHopDong||'')}
@@ -1742,13 +1710,12 @@ function renderThu() {
       ${td(tong?`<b style="color:#059669">${fmt(tong)}</b>`:'')}
       ${td(t.hoaHong?fmt(t.hoaHong):'')}
       <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6;white-space:nowrap">
-        ${canEdit?`<button class="btn btn-secondary btn-sm" onclick="editingThuId='${t.id}';renderThu()">Sửa</button> <button class="btn btn-danger btn-sm" onclick="deleteThu('${t.id}')">Xoá</button>`:''}
+        ${canEdit?`<button class="btn btn-secondary btn-sm" onclick="editThuRow('${t.id}')">Sửa</button> <button class="btn btn-danger btn-sm" onclick="deleteThu('${t.id}')">Xoá</button>`:''}
       </td>
     </tr>`;
   }).join('');
   document.getElementById('thu-table').innerHTML = rows ||
     `<tr><td colspan="17" style="text-align:center;padding:24px;color:#9ca3af">Chưa có khoản thu tháng ${thang}</td></tr>`;
-  if(editingThuId) setTimeout(calcThuEditRow, 0);
 }
 
 async function deleteThu(id) {
@@ -1756,7 +1723,67 @@ async function deleteThu(id) {
   await db.collection('thu').doc(id).delete(); toast('Đã xoá','success');
 }
 
-let editingThuId = null;
+function editThuRow(id) {
+  const t = cache.thu.find(x=>x.id===id);
+  if(!t) return;
+  // Đóng edit row cũ nếu có
+  document.getElementById('thu-edit-row')?.remove();
+  document.querySelectorAll('[data-thu-id]').forEach(r=>r.style.display='');
+  // Ẩn display row
+  const displayRow = document.querySelector(`[data-thu-id="${id}"]`);
+  if(!displayRow) return;
+  displayRow.style.display = 'none';
+
+  const bg = '#fffbeb';
+  const phongOpts = cache.phong
+    .filter((p,i,arr)=>arr.findIndex(x=>x.so===p.so)===i)
+    .sort((a,b)=>(a.so||'').localeCompare(b.so||''))
+    .map(p=>`<option value="${p.so}"${p.so===t.phong?' selected':''}>${p.so}</option>`).join('');
+  const inp = (fid,type,val) =>
+    `<input id="tre-${fid}" type="${type}" value="${val??''}" style="width:100%;padding:3px 5px;border:1px solid #d1d5db;border-radius:4px;font-size:11px" oninput="calcThuEditRow()">`;
+
+  const editRow = document.createElement('tr');
+  editRow.id = 'thu-edit-row';
+  editRow.style.background = bg;
+  editRow.innerHTML = `
+    <td style="position:sticky;left:0;background:${bg};z-index:5;padding:4px 6px;border-bottom:1px solid #f3f4f6;border-right:1px solid #e5e7eb">
+      <input id="tre-ngay" type="date" value="${t.ngay||''}" style="width:100%;padding:3px 5px;border:1px solid #d1d5db;border-radius:4px;font-size:11px">
+    </td>
+    <td style="position:sticky;left:110px;background:${bg};z-index:5;padding:4px 6px;border-bottom:1px solid #f3f4f6;border-right:2px solid #e5e7eb">
+      <select id="tre-phong" onchange="onThuEditPhongChange()" style="width:100%;padding:3px;border:1px solid #d1d5db;border-radius:4px;font-size:11px">
+        <option value="">--</option>${phongOpts}
+      </select>
+    </td>
+    <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6">
+      <input id="tre-soHopDong" type="text" value="${t.soHopDong||''}" onchange="onThuEditHDChange()" style="width:100%;padding:3px 5px;border:1px solid #d1d5db;border-radius:4px;font-size:11px">
+    </td>
+    <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6">
+      <input id="tre-kh" type="text" value="${(t.kh||t.ten||'').replace(/"/g,'&quot;')}" style="width:100%;padding:3px 5px;border:1px solid #d1d5db;border-radius:4px;font-size:11px">
+    </td>
+    <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6">${inp('tienCoc','number',t.tienCoc||0)}</td>
+    <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6">${inp('tienThue','number',t.tienThue||t.sotien||0)}</td>
+    <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6">${inp('dienCu','number',t.dienCu||0)}</td>
+    <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6">${inp('dienMoi','number',t.dienMoi||0)}</td>
+    <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6;text-align:right;color:#6b7280"><span id="tre-sd">0</span></td>
+    <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6">${inp('dienGia','number',t.dienGia||3800)}</td>
+    <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6;text-align:right;font-weight:700"><span id="tre-tienDien">0</span></td>
+    <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6">${inp('slNguoi','number',t.nuocSL||0)}</td>
+    <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6">${inp('donGiaNuoc','number',t.nuocGia||50000)}</td>
+    <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6;text-align:right;font-weight:700"><span id="tre-tienNuoc">0</span></td>
+    <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6;text-align:right;font-weight:700;color:#059669"><span id="tre-tong">0</span></td>
+    <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6">${inp('hoaHong','number',t.hoaHong||0)}</td>
+    <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6;white-space:nowrap">
+      <button class="btn btn-primary btn-sm" onclick="saveThuEdit('${id}')">💾</button>
+      <button class="btn btn-secondary btn-sm" onclick="closeThuEdit()">✕</button>
+    </td>`;
+  displayRow.insertAdjacentElement('afterend', editRow);
+  calcThuEditRow();
+}
+
+function closeThuEdit() {
+  document.getElementById('thu-edit-row')?.remove();
+  document.querySelectorAll('[data-thu-id]').forEach(r=>r.style.display='');
+}
 
 function calcThuEditRow() {
   const cu = Number(document.getElementById('tre-dienCu')?.value)||0;
@@ -1822,9 +1849,7 @@ async function saveThuEdit(id) {
     nuocSL: sl, nuocGia: giaN, tienNuoc, hoaHong,
     tongThu: tienCoc+tienThue+tienDien+tienNuoc,
   };
-  // Reset trước để onSnapshot không re-open edit row
-  editingThuId = null;
-  renderThu();
+  closeThuEdit();
   try {
     await db.collection('thu').doc(id).update(payload);
     toast('Đã cập nhật','success');
