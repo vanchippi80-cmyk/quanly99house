@@ -1690,11 +1690,14 @@ function renderKQKD() {
     CHI_ROWS.forEach(k=>{ chi[k] = bk.reduce((s,b)=>s+(norm(b.chiTiet)===k?(b.chi||0):0),0); });
     const totalChi = Object.values(chi).reduce((s,v)=>s+v,0);
 
+    const thuRefunds = bk.reduce((s,b)=>s+(thuCatsNorm.includes(norm(b.chiTiet))&&(b.chi||0)>0?b.chi:0),0);
+    const totalThuNet = totalThu - thuRefunds;
+
     const cdt = bk.reduce((s,b)=>s+(norm(b.chiTiet)==='Chuyển CĐT'?(b.chi||0):0),0);
     const soDuDau = soDuBefore(`${yr}-${mn2}-01`);
-    const soDuCuoi = soDuDau + totalThu - totalChi - cdt;
+    const soDuCuoi = soDuDau + totalThu - totalChi - thuRefunds - cdt;
 
-    return {m, thangKey, tienThue, phiDV, laiNH, tienCoc, thuKhac, totalThu, doanhThu, chi, totalChi, cdt, soDuDau, soDuCuoi, loiNhuan: doanhThu-totalChi};
+    return {m, thangKey, tienThue, phiDV, laiNH, tienCoc, thuKhac, totalThu, totalThuNet, thuRefunds, doanhThu, chi, totalChi, cdt, soDuDau, soDuCuoi, loiNhuan: doanhThu-totalChi};
   });
 
   // Totals helper
@@ -1740,8 +1743,8 @@ function renderKQKD() {
   // ─── Tổng thu ───
   t += `<tr style="background:#f0fdf4">
     ${lblB('Tổng thu','#f0fdf4','color:#15803d')}
-    ${mData.map(d=>tdB(f0(d.totalThu),'color:#15803d')).join('')}
-    ${tdB(f0(sum(d=>d.totalThu)),'color:#15803d')}
+    ${mData.map(d=>tdB(f0(d.totalThuNet),'color:#15803d')).join('')}
+    ${tdB(f0(sum(d=>d.totalThuNet)),'color:#15803d')}
   </tr>`;
 
   // ─── Doanh thu ───
