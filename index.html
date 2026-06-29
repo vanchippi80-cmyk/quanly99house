@@ -2627,23 +2627,39 @@ async function saveQuanLyPhong() {
 }
 function renderQlPhong() {
   const canEdit=['owner','manager'].includes(currentRole);
-  const rows = [...cache.phong].sort((a,b)=>(a.so||'').localeCompare(b.so||'')).map(p=>{
-    const hasContract = p.ten || p.soHopDong;
-    return `<tr>
-      <td><b>${p.so}</b></td><td>${p.tang||''}</td><td>${p.loai||''}</td>
-      <td>${p.dt||''}${p.dt?'m²':''}</td>
-      <td style="display:flex;gap:4px">
-        ${canEdit?`<button class="btn btn-secondary btn-sm" onclick="editQlPhong('${p.id}')" title="Sửa">✏️</button>`:''}
-        ${canEdit&&!hasContract?`<button class="btn btn-secondary btn-sm" onclick="deleteQlPhong('${p.id}','${p.so}')" title="Xóa" style="color:#dc2626">🗑️</button>`:''}
-      </td>
-    </tr>`;
-  }).join('');
-  const tb=document.getElementById('ql-phong-table'); if(tb) tb.innerHTML=rows||'<tr><td colspan="5" style="text-align:center;color:#9ca3af">Chưa có phòng nào</td></tr>';
+  // Danh sách phòng: mỗi số phòng chỉ hiện 1 dòng (lấy doc đầu tiên theo thứ tự)
+  // Các doc trùng số phòng = duplicate cần xóa, hiện nút xóa riêng
+  const sorted = [...cache.phong].sort((a,b)=>(a.so||'').localeCompare(b.so||''));
+  const seen = new Map(); // so -> first doc
+  const duplicates = []; // doc bị trùng
+  sorted.forEach(p => {
+    if(!seen.has(p.so)) seen.set(p.so, p);
+    else duplicates.push(p);
+  });
+
+  let rows = [...seen.values()].map(p=>`<tr>
+    <td><b>${p.so}</b></td><td>${p.tang||''}</td><td>${p.loai||''}</td>
+    <td>${p.dt||''}${p.dt?'m²':''}</td>
+    <td style="display:flex;gap:4px">
+      ${canEdit?`<button class="btn btn-secondary btn-sm" onclick="editQlPhong('${p.id}')" title="Sửa">✏️</button>`:''}
+    </td>
+  </tr>`).join('');
+
+  // Hiện các doc trùng với cảnh báo và nút xóa
+  if(duplicates.length && canEdit) {
+    rows += `<tr><td colspan="5" style="background:#fef3c7;padding:6px 8px;font-size:11px;color:#92400e">
+      ⚠️ Phát hiện ${duplicates.length} phòng bị trùng — cần xóa:
+      ${duplicates.map(p=>`<button class="btn btn-sm" style="background:#dc2626;color:#fff;margin-left:6px" onclick="deleteQlPhong('${p.id}','${p.so}')">Xóa bản trùng ${p.so}</button>`).join('')}
+    </td></tr>`;
+  }
+
+  const tb=document.getElementById('ql-phong-table');
+  if(tb) tb.innerHTML=rows||'<tr><td colspan="5" style="text-align:center;color:#9ca3af">Chưa có phòng nào</td></tr>';
 }
 async function deleteQlPhong(id, so) {
-  if(!confirm(`Xóa phòng ${so}? Chỉ xóa được phòng chưa có hợp đồng.`)) return;
+  if(!confirm(`Xóa bản trùng phòng ${so}?`)) return;
   await db.collection('phong').doc(id).delete();
-  toast(`Đã xóa phòng ${so}`,'success');
+  toast(`Đã xóa bản trùng ${so}`,'success');
 }
 function editQlPhong(id) {
   const p=cache.phong.find(x=>x.id===id); if(!p) return;
