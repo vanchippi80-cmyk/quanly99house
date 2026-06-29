@@ -330,13 +330,24 @@ tr:hover td{background:#fafafa}
         <button class="btn btn-secondary" id="btn-add-phuLuc" onclick="openPhuLucModal()" style="display:none">+ Phụ lục hợp đồng</button>
         <button class="btn btn-secondary" id="btn-ql-phong" onclick="openModal('modal-ql-phong')" style="display:none">🚪 Danh mục phòng</button>
       </div>
-      <div class="card" style="overflow-x:auto">
-        <table style="font-size:12px;min-width:1500px">
+      <div class="card" style="overflow-x:auto;max-height:75vh;overflow-y:auto">
+        <table style="font-size:12px;min-width:1500px;border-collapse:separate;border-spacing:0">
           <thead><tr>
-            <th>Phòng</th><th>Hợp đồng số</th><th>Nội dung</th><th>Ngày HĐ</th>
-            <th>Tên khách</th><th>SĐT</th><th>SL khách</th><th>Kỳ hạn</th>
-            <th>Giá thuê</th><th>Đặt cọc</th><th>Giá điện</th><th>Giá nước</th>
-            <th>Trạng thái HĐ</th><th>Ghi chú</th><th id="hd-th-action"></th>
+            <th style="position:sticky;top:0;left:0;z-index:30;background:#1a3a2a;min-width:70px">Phòng</th>
+            <th style="position:sticky;top:0;left:70px;z-index:30;background:#1a3a2a;min-width:110px">Hợp đồng số</th>
+            <th style="position:sticky;top:0;left:180px;z-index:30;background:#1a3a2a;min-width:130px">Nội dung</th>
+            <th style="position:sticky;top:0;z-index:20;background:#1a3a2a">Ngày HĐ</th>
+            <th style="position:sticky;top:0;z-index:20;background:#1a3a2a">Tên khách</th>
+            <th style="position:sticky;top:0;z-index:20;background:#1a3a2a">SĐT</th>
+            <th style="position:sticky;top:0;z-index:20;background:#1a3a2a">SL khách</th>
+            <th style="position:sticky;top:0;z-index:20;background:#1a3a2a">Kỳ hạn</th>
+            <th style="position:sticky;top:0;z-index:20;background:#1a3a2a">Giá thuê</th>
+            <th style="position:sticky;top:0;z-index:20;background:#1a3a2a">Đặt cọc</th>
+            <th style="position:sticky;top:0;z-index:20;background:#1a3a2a">Giá điện</th>
+            <th style="position:sticky;top:0;z-index:20;background:#1a3a2a">Giá nước</th>
+            <th style="position:sticky;top:0;z-index:20;background:#1a3a2a">Trạng thái HĐ</th>
+            <th style="position:sticky;top:0;z-index:20;background:#1a3a2a">Ghi chú</th>
+            <th style="position:sticky;top:0;z-index:20;background:#1a3a2a" id="hd-th-action"></th>
           </tr></thead>
           <tbody id="hd-table"></tbody>
         </table>
@@ -673,17 +684,20 @@ tr:hover td{background:#fafafa}
   <div class="modal" style="width:620px;max-width:98vw">
     <div class="modal-header"><h3>📎 Phụ lục hợp đồng</h3><button class="modal-close" onclick="closeModal('modal-phuLuc')">✕</button></div>
     <div class="modal-body">
-      <div class="form-group"><label>Chọn phòng *</label>
-        <select id="pl-phong" onchange="onPhuLucPhongChange()"></select>
+      <div class="form-row">
+        <div class="form-group"><label>Chọn phòng *</label>
+          <select id="pl-phong" onchange="onPhuLucPhongChange()"></select>
+        </div>
+        <div class="form-group"><label>Số hợp đồng *</label>
+          <select id="pl-soHopDong"></select>
+        </div>
       </div>
       <div class="form-row">
         <div class="form-group"><label>Ngày phụ lục</label><input type="date" id="pl-ngay"></div>
         <div class="form-group"><label>Kỳ hạn</label><input type="text" id="pl-kyHan" placeholder="3 tháng"></div>
-      </div>
-      <div class="form-row">
-        <div class="form-group"><label>Tên khách</label><input type="text" id="pl-ten"></div>
         <div class="form-group"><label>SL khách</label><input type="number" id="pl-slKhach" min="1"></div>
       </div>
+      <input type="hidden" id="pl-ten">
       <div class="form-row">
         <div class="form-group"><label>Giá thuê</label><input type="number" id="pl-gia"></div>
         <div class="form-group"><label>Giá điện (đ/số)</label><input type="number" id="pl-giaDien"></div>
@@ -1926,10 +1940,11 @@ function renderHopDong() {
   sorted.forEach(p => {
     const phuLucs = p.phuLuc || [];
     const statusCell = p.ten ? hdStatus(p) : '<span class="badge bgr">Trống</span>';
+    const bg = 'background:#fff';
     rows += `<tr>
-      <td><b>${p.so}</b></td>
-      <td>${p.soHopDong||''}</td>
-      <td style="color:#1d4ed8;font-weight:500">${p.noiDung||'Hợp đồng thuê'}</td>
+      <td style="position:sticky;left:0;z-index:10;${bg};min-width:70px"><b>${p.so}</b></td>
+      <td style="position:sticky;left:70px;z-index:10;${bg};min-width:110px">${p.soHopDong||''}</td>
+      <td style="position:sticky;left:180px;z-index:10;${bg};min-width:130px;color:#1d4ed8;font-weight:500">${p.noiDung||'Hợp đồng thuê'}</td>
       <td>${p.ngayHopDong||p.batdau||''}</td>
       <td>${p.ten||'—'}</td>
       <td>${p.sdt||''}</td>
@@ -1945,10 +1960,11 @@ function renderHopDong() {
     </tr>`;
     // Phụ lục rows
     phuLucs.forEach((pl, idx) => {
-      rows += `<tr style="background:#fefce8">
-        <td style="color:#92400e;font-size:11px;padding-left:20px">↳ ${p.so}</td>
-        <td>${p.soHopDong||''}</td>
-        <td style="color:#92400e;font-size:11px">Phụ lục ${idx+1}</td>
+      const plBg = 'background:#fefce8';
+      rows += `<tr style="${plBg}">
+        <td style="position:sticky;left:0;z-index:10;${plBg};min-width:70px;color:#92400e;font-size:11px">↳ ${p.so}</td>
+        <td style="position:sticky;left:70px;z-index:10;${plBg};min-width:110px">${pl.soHopDong||p.soHopDong||''}</td>
+        <td style="position:sticky;left:180px;z-index:10;${plBg};min-width:130px;color:#92400e;font-size:11px">Phụ lục ${idx+1}</td>
         <td>${pl.ngay||''}</td>
         <td>${pl.ten||p.ten||''}</td>
         <td>${p.sdt||''}</td>
@@ -2676,35 +2692,48 @@ function editQlPhong(id) {
   document.getElementById('ql-phong-add-row').dataset.editId=id;
 }
 function openPhuLucModal(phongId) {
+  // Dropdown phòng: chỉ hiện số phòng, không kèm tên khách
+  const uniqueRooms = [...new Map(cache.phong.map(p=>[p.so,p])).values()]
+    .sort((a,b)=>(a.so||'').localeCompare(b.so||''));
   const sel = document.getElementById('pl-phong');
-  sel.innerHTML = cache.phong.map(p=>`<option value="${p.id}" ${p.id===phongId?'selected':''}>${p.so} - ${p.ten||'Trống'}</option>`).join('');
-  if(phongId) onPhuLucPhongChange();
-  ['ngay','kyHan','ten','slKhach','gia','giaDien','giaNuoc','ghiChu'].forEach(k=>{
+  sel.innerHTML = '<option value="">-- Chọn phòng --</option>' +
+    uniqueRooms.map(p=>`<option value="${p.so}">${p.so}</option>`).join('');
+  ['ngay','kyHan','slKhach','gia','giaDien','giaNuoc','ghiChu'].forEach(k=>{
     const el=document.getElementById('pl-'+k); if(el) el.value='';
   });
   document.getElementById('pl-ngay').value = new Date().toISOString().split('T')[0];
-  document.getElementById('modal-phuLuc').dataset.editPhongId='';
+  onPhuLucPhongChange();
   openModal('modal-phuLuc');
 }
 function onPhuLucPhongChange() {
-  const pid = document.getElementById('pl-phong').value;
-  const p = cache.phong.find(x=>x.id===pid);
-  if(p) {
-    if(!document.getElementById('pl-ten').value) document.getElementById('pl-ten').value=p.ten||'';
-    if(!document.getElementById('pl-gia').value) document.getElementById('pl-gia').value=p.gia||'';
-    if(!document.getElementById('pl-giaDien').value) document.getElementById('pl-giaDien').value=p.giaDien||'';
-    if(!document.getElementById('pl-giaNuoc').value) document.getElementById('pl-giaNuoc').value=p.giaNuoc||'';
-    if(!document.getElementById('pl-kyHan').value) document.getElementById('pl-kyHan').value=p.kyHan||'';
+  const so = document.getElementById('pl-phong').value;
+  // Tìm tất cả hợp đồng của phòng này để populate số HĐ
+  const contracts = cache.phong.filter(p => p.so === so && p.soHopDong)
+    .sort((a,b)=>(b.batdau||'').localeCompare(a.batdau||''));
+  const hdSel = document.getElementById('pl-soHopDong');
+  hdSel.innerHTML = contracts.length
+    ? contracts.map(p=>`<option value="${p.soHopDong}">${p.soHopDong}${p.ten?' - '+p.ten:''}</option>`).join('')
+    : '<option value="">-- Chưa có hợp đồng --</option>';
+  // Auto-fill giá từ hợp đồng mới nhất
+  const latest = contracts[0];
+  if(latest) {
+    if(!document.getElementById('pl-gia').value) document.getElementById('pl-gia').value=latest.gia||'';
+    if(!document.getElementById('pl-giaDien').value) document.getElementById('pl-giaDien').value=latest.giaDien||'';
+    if(!document.getElementById('pl-giaNuoc').value) document.getElementById('pl-giaNuoc').value=latest.giaNuoc||'';
+    if(!document.getElementById('pl-kyHan').value) document.getElementById('pl-kyHan').value=latest.kyHan||'';
   }
 }
 async function savePhuLuc() {
-  const pid = document.getElementById('pl-phong').value;
-  if(!pid) { toast('Chọn phòng','error'); return; }
-  const p = cache.phong.find(x=>x.id===pid);
-  if(!p) return;
+  const so = document.getElementById('pl-phong').value;
+  if(!so) { toast('Chọn phòng','error'); return; }
+  const soHopDong = document.getElementById('pl-soHopDong').value;
+  if(!soHopDong) { toast('Chọn số hợp đồng','error'); return; }
+  // Tìm doc phòng tương ứng với hợp đồng đã chọn
+  const p = cache.phong.find(x=>x.so===so && x.soHopDong===soHopDong) || cache.phong.find(x=>x.so===so);
+  if(!p) { toast('Không tìm thấy hợp đồng','error'); return; }
   const pl = {
+    soHopDong,
     ngay: document.getElementById('pl-ngay').value,
-    ten: document.getElementById('pl-ten').value,
     slKhach: Number(document.getElementById('pl-slKhach').value)||0,
     kyHan: document.getElementById('pl-kyHan').value,
     gia: Number(document.getElementById('pl-gia').value)||0,
@@ -2714,7 +2743,7 @@ async function savePhuLuc() {
     createdAt: Date.now()
   };
   const existing = p.phuLuc || [];
-  await db.collection('phong').doc(pid).update({ phuLuc: [...existing, pl] });
+  await db.collection('phong').doc(p.id).update({ phuLuc: [...existing, pl] });
   toast('Đã thêm phụ lục','success');
   closeModal('modal-phuLuc');
 }
