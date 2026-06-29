@@ -320,7 +320,7 @@ tr:hover td{background:#fafafa}
         <button class="btn btn-secondary" onclick="window.print()">🖨 In báo cáo</button>
       </div>
       <div id="kqkd-cards" class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px"></div>
-      <div id="kqkd-table-wrap" style="overflow-x:auto"></div>
+      <div id="kqkd-table-wrap" style="overflow-x:auto;overflow-y:auto;max-height:70vh"></div>
     </div>
 
     <!-- HOP DONG TAB -->
@@ -1813,18 +1813,18 @@ function renderKQKD() {
   const thStyle = 'text-align:right;padding:5px 7px;min-width:100px;font-size:11px;white-space:nowrap';
   const td = (v,style='') => `<td style="text-align:right;padding:4px 7px;font-size:11px;border-bottom:1px solid #f3f4f6;${style}">${v}</td>`;
   const tdB = (v,style='') => `<td style="text-align:right;padding:5px 7px;font-size:12px;font-weight:700;border-bottom:1px solid #e5e7eb;${style}">${v}</td>`;
-  const lbl = (txt,style='') => `<td style="padding:5px 12px;font-size:12px;position:sticky;left:0;background:#fff;z-index:1;border-bottom:1px solid #f3f4f6;white-space:nowrap;${style}">${txt}</td>`;
-  const lblB = (txt,bg='#fff',style='') => `<td style="padding:6px 12px;font-size:12px;font-weight:700;position:sticky;left:0;background:${bg};z-index:1;border-bottom:1px solid #e5e7eb;white-space:nowrap;${style}">${txt}</td>`;
+  const lbl = (txt,style='') => `<td style="padding:5px 12px;font-size:12px;position:sticky;left:0;background:#fff;z-index:10;border-bottom:1px solid #f3f4f6;border-right:2px solid #e5e7eb;white-space:nowrap;${style}">${txt}</td>`;
+  const lblB = (txt,bg='#fff',style='') => `<td style="padding:6px 12px;font-size:12px;font-weight:700;position:sticky;left:0;background:${bg};z-index:10;border-bottom:1px solid #e5e7eb;border-right:2px solid #e5e7eb;white-space:nowrap;${style}">${txt}</td>`;
 
   // Header row for months
   const monthHeaders = months.map(m=>`<th style="${thStyle}">T${m}</th>`).join('');
 
   // Build table
-  let t = `<table style="width:100%;border-collapse:collapse;font-size:12px">
+  let t = `<table style="width:100%;border-collapse:separate;border-spacing:0;font-size:12px">
   <thead><tr style="background:#14532d;color:#fff">
-    <th style="text-align:left;padding:8px 12px;position:sticky;left:0;background:#14532d;z-index:2;min-width:160px">${cosoName}</th>
-    ${monthHeaders}
-    <th style="${thStyle};background:#0f3d1f">Tổng</th>
+    <th style="text-align:left;padding:8px 12px;position:sticky;top:0;left:0;background:#14532d;z-index:30;min-width:180px">${cosoName}</th>
+    ${months.map(m=>`<th style="${thStyle};position:sticky;top:0;z-index:20">T${m}</th>`).join('')}
+    <th style="${thStyle};background:#0f3d1f;position:sticky;top:0;z-index:20">Tổng</th>
   </tr></thead><tbody>`;
 
   // ─── Số dư đầu kỳ ───
