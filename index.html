@@ -715,7 +715,7 @@ tr:hover td{background:#fafafa}
       <div class="form-group"><label>Ghi chú</label><input type="text" id="pl-ghiChu"></div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('modal-phuLuc')">Hủy</button>
+      <button class="btn btn-secondary" onclick="closeModal('modal-phuLuc');const sb=document.querySelector('#modal-phuLuc .btn-primary');if(sb){sb.textContent='Lưu phụ lục';sb.onclick=savePhuLuc;}">Hủy</button>
       <button class="btn btn-primary" onclick="savePhuLuc()">Lưu phụ lục</button>
     </div>
   </div>
@@ -2303,7 +2303,7 @@ function renderHopDong() {
         <td style="text-align:right">${pl.giaNuoc?fmt(pl.giaNuoc):''}</td>
         <td></td>
         <td style="font-size:11px;color:#6b7280">${pl.ghiChu||''}</td>
-        <td>${canEdit?`<button class="btn btn-secondary btn-sm" onclick="deletePhuLuc('${p.id}',${idx})" title="Xóa phụ lục" style="color:#dc2626">🗑️</button>`:''}</td>
+        <td style="white-space:nowrap">${canEdit?`<button class="btn btn-secondary btn-sm" onclick="editPhuLuc('${p.id}',${idx})" title="Sửa phụ lục">✏️</button> <button class="btn btn-danger btn-sm" onclick="deletePhuLuc('${p.id}',${idx})" title="Xóa phụ lục">🗑️</button>`:''}</td>
       </tr>`;
     });
   });
@@ -3105,6 +3105,78 @@ async function deletePhuLuc(phongId, idx) {
   const updated = (p.phuLuc||[]).filter((_,i)=>i!==idx);
   await db.collection('phong').doc(phongId).update({ phuLuc: updated });
   toast('Đã xóa phụ lục','success');
+}
+function editPhuLuc(phongId, idx) {
+  const p = cache.phong.find(x=>x.id===phongId);
+  if(!p) return;
+  const pl = (p.phuLuc||[])[idx];
+  if(!pl) return;
+  // Reuse modal, store edit context
+  const uniqueRooms = [...new Map(cache.phong.map(p=>[p.so,p])).values()]
+    .sort((a,b)=>(a.so||'').localeCompare(b.so||''));
+  const sel = document.getElementById('pl-phong');
+  sel.innerHTML = '<option value="">-- Chọn phòng --</option>' +
+    uniqueRooms.map(r=>`<option value="${r.so}"${r.so===p.so?' selected':''}>${r.so}</option>`).join('');
+  // Fill HĐ dropdown
+  const contracts = cache.phong.filter(x=>x.so===p.so && x.soHopDong)
+    .sort((a,b)=>(b.batdau||'').localeCompare(a.batdau||''));
+  const hdSel = document.getElementById('pl-soHopDong');
+  hdSel.innerHTML = contracts.map(c=>`<option value="${c.soHopDong}"${c.soHopDong===pl.soHopDong?' selected':''}>${c.soHopDong}</option>`).join('');
+  // Fill fields
+  const setV = (id,v) => { const el=document.getElementById(id); if(el) el.value=v||''; };
+  setV('pl-ngay',    pl.ngay);
+  setV('pl-batdau',  pl.batdau);
+  setV('pl-ketthuc', pl.ketthuc);
+  setV('pl-kyHan',   pl.kyHan);
+  setV('pl-slKhach', pl.slKhach||'');
+  setV('pl-gia',     pl.gia||'');
+  setV('pl-giaDien', pl.giaDien||'');
+  setV('pl-giaNuoc', pl.giaNuoc||'');
+  setV('pl-ghiChu',  pl.ghiChu);
+  // Switch save button to edit mode
+  const saveBtn = document.querySelector('#modal-phuLuc .btn-primary');
+  if(saveBtn) {
+    saveBtn.textContent = 'Cập nhật phụ lục';
+    saveBtn.onclick = () => savePhuLucEdit(phongId, idx);
+  }
+  openModal('modal-phuLuc');
+}
+async function savePhuLucEdit(phongId, idx) {
+  const p = cache.phong.find(x=>x.id===phongId);
+  if(!p) return;
+  const ketthucMoi = document.getElementById('pl-ketthuc').value;
+  const giaMoi     = Number(document.getElementById('pl-gia').value)||0;
+  const giaDienMoi = Number(document.getElementById('pl-giaDien').value)||0;
+  const giaNuocMoi = Number(document.getElementById('pl-giaNuoc').value)||0;
+  const updated = [...(p.phuLuc||[])];
+  updated[idx] = {
+    ...updated[idx],
+    soHopDong: document.getElementById('pl-soHopDong').value,
+    ngay:     document.getElementById('pl-ngay').value,
+    batdau:   document.getElementById('pl-batdau').value,
+    ketthuc:  ketthucMoi,
+    slKhach:  Number(document.getElementById('pl-slKhach').value)||0,
+    kyHan:    document.getElementById('pl-kyHan').value,
+    gia:      giaMoi,
+    giaDien:  giaDienMoi,
+    giaNuoc:  giaNuocMoi,
+    ghiChu:   document.getElementById('pl-ghiChu').value,
+  };
+  // Check if this is the latest phụ lục → update parent too
+  const isLast = idx === updated.length - 1;
+  const parentUpdate = { phuLuc: updated };
+  if(isLast) {
+    if(ketthucMoi) parentUpdate.ketthuc = ketthucMoi;
+    if(giaMoi)     parentUpdate.gia     = giaMoi;
+    if(giaDienMoi) parentUpdate.giaDien = giaDienMoi;
+    if(giaNuocMoi) parentUpdate.giaNuoc = giaNuocMoi;
+  }
+  await db.collection('phong').doc(phongId).update(parentUpdate);
+  toast('Đã cập nhật phụ lục','success');
+  closeModal('modal-phuLuc');
+  // Reset save button
+  const saveBtn = document.querySelector('#modal-phuLuc .btn-primary');
+  if(saveBtn) { saveBtn.textContent = 'Lưu phụ lục'; saveBtn.onclick = savePhuLuc; }
 }
 function onThuLoaiChange() {
   const loai=document.getElementById('t-loai').value;
