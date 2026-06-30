@@ -317,6 +317,7 @@ tr:hover td{background:#fafafa}
               <th style="position:sticky;top:0;left:110px;z-index:30;background:#14532d;min-width:70px;padding:8px 10px">Phòng</th>
               <th style="position:sticky;top:0;z-index:20;background:#14532d;padding:8px 10px;min-width:110px">Hợp đồng số</th>
               <th style="position:sticky;top:0;z-index:20;background:#14532d;padding:8px 10px;min-width:150px">Tên khách</th>
+              <th style="position:sticky;top:0;z-index:20;background:#14532d;padding:8px 10px;min-width:150px">Diễn giải</th>
               <th style="position:sticky;top:0;z-index:20;background:#14532d;padding:8px 10px">Tiền cọc</th>
               <th style="position:sticky;top:0;z-index:20;background:#14532d;padding:8px 10px">Tiền thuê</th>
               <th style="position:sticky;top:0;z-index:20;background:#14532d;padding:8px 10px">Số điện cũ</th>
@@ -1055,7 +1056,7 @@ function renderAll() {
 
 // ===== HELPERS =====
 function fmt(n) { return (n||0).toLocaleString('vi-VN'); }
-function fmtNgay(s) { if (!s) return ''; const [y,m,d] = s.split('-'); return `${d}-${m}-${y}`; }
+function fmtNgay(s) { if (!s) return ''; const [y,m,d] = (s||'').split('-'); return d&&m&&y?`${d}/${m}/${y}`:''; }
 function fmtNum(n) { return (n||0).toLocaleString('vi-VN'); }
 function daysUntil(dateStr) { if (!dateStr) return 9999; return Math.round((new Date(dateStr)-new Date())/(1000*60*60*24)); }
 function isBankThu(cat) { return CAT_THU.includes(cat); }
@@ -1663,7 +1664,7 @@ function renderThu() {
   renderThuMonthNav();
   const thang = getSelMonth();
   const filterPhong = (document.getElementById('thu-filter-phong')?.value||'').normalize('NFC').toLowerCase();
-  const allM = thuOfMonth(thang).sort((a,b)=>(a.phong||'').localeCompare(b.phong||'')||(a.ngay||'').localeCompare(b.ngay||''));
+  const allM = thuOfMonth(thang).sort((a,b)=>(a.ngay||'').localeCompare(b.ngay||'')||(a.phong||'').localeCompare(b.phong||''));
   const thuM = allM.filter(t => !filterPhong || (t.phong||'').normalize('NFC').toLowerCase().includes(filterPhong));
 
   // Stat cards
@@ -1694,10 +1695,11 @@ function renderThu() {
     const sd = thuSd(t);
     const tong = thuTongThu(t);
     return `<tr data-thu-id="${t.id}">
-      <td style="position:sticky;left:0;background:#fff;z-index:5;padding:5px 8px;border-bottom:1px solid #f3f4f6;border-right:1px solid #e5e7eb">${t.ngay||''}</td>
+      <td style="position:sticky;left:0;background:#fff;z-index:5;padding:5px 8px;border-bottom:1px solid #f3f4f6;border-right:1px solid #e5e7eb">${fmtNgay(t.ngay)}</td>
       <td style="position:sticky;left:110px;background:#fff;z-index:5;padding:5px 8px;border-bottom:1px solid #f3f4f6;border-right:2px solid #e5e7eb"><b>${t.phong||''}</b></td>
       ${td(t.soHopDong||'')}
       ${td(t.kh||t.ten||'')}
+      ${td(t.dienGiai||'','text-align:left')}
       ${td(t.tienCoc?fmt(t.tienCoc):'')}
       ${td(t.tienThue?fmt(t.tienThue):t.sotien?fmt(t.sotien):'')}
       ${td(t.dienCu||'')}
@@ -1717,7 +1719,7 @@ function renderThu() {
     </tr>`;
   }).join('');
   document.getElementById('thu-table').innerHTML = rows ||
-    `<tr><td colspan="17" style="text-align:center;padding:24px;color:#9ca3af">Chưa có khoản thu tháng ${thang}</td></tr>`;
+    `<tr><td colspan="18" style="text-align:center;padding:24px;color:#9ca3af">Chưa có khoản thu tháng ${thang}</td></tr>`;
 }
 
 async function deleteThu(id) {
@@ -1761,6 +1763,9 @@ function editThuRow(id) {
     </td>
     <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6">
       <input id="tre-kh" type="text" value="${(t.kh||t.ten||'').replace(/"/g,'&quot;')}" style="width:100%;padding:3px 5px;border:1px solid #d1d5db;border-radius:4px;font-size:11px">
+    </td>
+    <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6">
+      <input id="tre-dienGiai" type="text" value="${(t.dienGiai||'').replace(/"/g,'&quot;')}" style="width:100%;padding:3px 5px;border:1px solid #d1d5db;border-radius:4px;font-size:11px">
     </td>
     <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6">${inp('tienCoc','number',t.tienCoc||0)}</td>
     <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6">${inp('tienThue','number',t.tienThue||t.sotien||0)}</td>
@@ -1846,8 +1851,9 @@ async function saveThuEdit(id) {
   const hoaHong = Number(document.getElementById('tre-hoaHong')?.value)||0;
   const soHopDong = document.getElementById('tre-soHopDong')?.value||'';
   const kh = document.getElementById('tre-kh')?.value||'';
+  const dienGiai = document.getElementById('tre-dienGiai')?.value||'';
   const payload = {
-    ngay, thang: ngay.slice(0,7), phong, soHopDong, kh,
+    ngay, thang: ngay.slice(0,7), phong, soHopDong, kh, dienGiai,
     tienCoc, tienThue, sotien: tienThue,
     dienCu: cu, dienMoi: moi, dienGia: giaD, tienDien,
     nuocSL: sl, nuocGia: giaN, tienNuoc, hoaHong,
@@ -1890,6 +1896,7 @@ function addThuRow() {
     </td>
     <td style="padding:4px 6px"><input id="tri-soHopDong" type="text" placeholder="" onchange="onThuRowHDChange()" style="width:100%;padding:3px 5px;border:1px solid #d1d5db;border-radius:4px;font-size:11px"></td>
     <td style="padding:4px 6px"><input id="tri-kh" type="text" placeholder="" style="width:100%;padding:3px 5px;border:1px solid #d1d5db;border-radius:4px;font-size:11px"></td>
+    <td style="padding:4px 6px"><input id="tri-dienGiai" type="text" placeholder="" style="width:100%;padding:3px 5px;border:1px solid #d1d5db;border-radius:4px;font-size:11px"></td>
     <td style="padding:4px 6px">${inp('tienCoc','number','0')}</td>
     <td style="padding:4px 6px">${inp('tienThue','number','0')}</td>
     <td style="padding:4px 6px">${inp('dienCu','number','0')}</td>
@@ -1976,6 +1983,7 @@ async function saveThuRow() {
     ngay, thang: ngay.slice(0,7),
     phong, soHopDong: document.getElementById('tri-soHopDong').value,
     kh: document.getElementById('tri-kh').value,
+    dienGiai: document.getElementById('tri-dienGiai')?.value||'',
     tienCoc, tienThue, sotien: tienThue,
     dienCu: cu, dienMoi: moi, dienGia: giaD, tienDien,
     nuocSL: slNuoc, nuocGia: giaN, tienNuoc,
@@ -2234,7 +2242,7 @@ function renderHopDong() {
       <td style="position:sticky;left:0;z-index:10;${bg};min-width:70px"><b>${p.so}</b></td>
       <td style="position:sticky;left:70px;z-index:10;${bg};min-width:110px">${p.soHopDong||''}</td>
       <td style="position:sticky;left:180px;z-index:10;${bg};min-width:130px;color:#1d4ed8;font-weight:500">${p.noiDung||'Hợp đồng thuê'}</td>
-      <td>${p.ngayHopDong||p.batdau||''}</td>
+      <td>${fmtNgay(p.ngayHopDong||p.batdau)}</td>
       <td>${p.ten||'—'}</td>
       <td>${p.sdt||''}</td>
       <td style="text-align:center">${p.slKhach||''}</td>
@@ -2254,7 +2262,7 @@ function renderHopDong() {
         <td style="position:sticky;left:0;z-index:10;${plBg};min-width:70px;color:#92400e;font-size:11px">↳ ${p.so}</td>
         <td style="position:sticky;left:70px;z-index:10;${plBg};min-width:110px">${pl.soHopDong||p.soHopDong||''}</td>
         <td style="position:sticky;left:180px;z-index:10;${plBg};min-width:130px;color:#92400e;font-size:11px">Phụ lục ${idx+1}</td>
-        <td>${pl.ngay||''}</td>
+        <td>${fmtNgay(pl.ngay)}</td>
         <td>${pl.ten||p.ten||''}</td>
         <td>${p.sdt||''}</td>
         <td style="text-align:center">${pl.slKhach||''}</td>
@@ -2312,7 +2320,7 @@ function renderKhachInOut() {
     if(p.ketthuc){ if(days<0) badge='<span class="badge br">Hết hạn</span>'; else if(days<15) badge=`<span class="badge bo">Còn ${days}N</span>`; else if(days<=60) badge=`<span class="badge bb">Còn ${days}N</span>`; }
     return `<tr><td><b>${p.so}</b></td><td>${p.ten}</td><td>${p.sdt||''}</td>
       <td>${fmt(p.gia)}</td>
-      <td>${p.batdau||''}</td><td>${p.ketthuc||''}</td><td>${badge}</td>
+      <td>${fmtNgay(p.batdau)}</td><td>${fmtNgay(p.ketthuc)}</td><td>${badge}</td>
       <td>${p.ghiChu||p.ghichu||''}</td></tr>`;
   }).join('');
   document.getElementById('kt-table').innerHTML = rows || `<tr><td colspan="8"><div class="empty"><div class="icon">👥</div><p>Chưa có khách thuê</p></div></td></tr>`;
@@ -2410,7 +2418,7 @@ function renderTaiSan() {
       <td style="text-align:center">${ts.sl||1}</td>
       <td style="font-size:11px;color:#6b7280">${ts.noiMua||''}</td>
       <td style="font-size:11px;color:#374151;max-width:160px">${ts.dienGiai||''}</td>
-      <td>${ts.ngayMua||''}</td><td>${fmt(ts.soTien)}</td>
+      <td>${fmtNgay(ts.ngayMua)}</td><td>${fmt(ts.soTien)}</td>
       <td style="font-size:11px;color:#6b7280;max-width:120px">${ts.ghichu||''}</td>
       <td>${canEdit?`<button class="btn btn-secondary btn-sm" onclick="editTaiSan('${ts.id}')">✏️</button> <button class="btn btn-danger btn-sm" onclick="deleteTaiSan('${ts.id}')">🗑</button>`:''}</td>
     </tr>`;
