@@ -446,6 +446,44 @@ tr:hover td{background:#fafafa}
       </div>
     </div>
 
+    <!-- BAO TRI TAB -->
+    <div class="tab-pane" id="tab-bao-tri">
+      <div style="display:flex;gap:8px;margin-bottom:16px;align-items:center;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="addBaoTriRow()" id="btn-add-baotri">+ Thêm dòng</button>
+        <input type="text" id="bt-filter" placeholder="🔍 Tìm kiếm..." oninput="renderBaoTri()" style="padding:7px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;width:200px">
+        <select id="bt-year" onchange="renderBaoTri()" style="padding:7px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:13px">
+          <option value="">-- Tất cả năm --</option>
+        </select>
+      </div>
+      <div class="stats-grid" style="grid-template-columns:repeat(2,1fr)">
+        <div class="stat-card blue"><div class="lbl">Tổng chi phí</div><div class="val" id="bt-total">—</div></div>
+        <div class="stat-card orange"><div class="lbl">Số lần bảo trì</div><div class="val" id="bt-count">—</div></div>
+      </div>
+      <div class="card">
+        <div style="overflow-x:auto;max-height:62vh;overflow-y:auto">
+          <table style="border-collapse:collapse">
+            <thead style="position:sticky;top:0;z-index:2">
+              <tr>
+                <th style="width:90px">Mã TS</th>
+                <th style="width:130px">Tên TS</th>
+                <th style="width:100px">Vị trí</th>
+                <th>Diễn giải</th>
+                <th style="width:130px">Ngày</th>
+                <th style="width:120px;text-align:right">Chi phí</th>
+                <th style="width:40px"></th>
+              </tr>
+            </thead>
+            <tbody id="baotri-table"></tbody>
+            <tfoot><tr id="bt-foot" style="background:#fefce8;font-weight:700;display:none">
+              <td colspan="5" style="padding:6px 12px">Tổng cộng</td>
+              <td style="padding:6px 12px;text-align:right" id="bt-total-foot"></td>
+              <td></td>
+            </tr></tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- CO SO TAB -->
     <div class="tab-pane" id="tab-co-so">
       <div style="margin-bottom:16px">
@@ -837,7 +875,7 @@ const FieldValue = firebase.firestore.FieldValue;
 
 let currentUser = null, currentRole = null;
 let selectedCosoId = null, allCosos = [];
-let cache = { phong:[], thu:[], no:[], users:[], hoahong:[], taisan:[], bank:[], inout:[] };
+let cache = { phong:[], thu:[], no:[], users:[], hoahong:[], taisan:[], bank:[], inout:[], baotri:[] };
 let unsubscribes = [], cosoUnsub = null;
 let currentTab = 'no-coso';
 
@@ -861,7 +899,9 @@ const NAV_CONFIG = {
     {id:'khach-inout',icon:'👥',label:'Khách in/out'},
     {id:'thu-tien',icon:'💰',label:'Thu tiền'},
     {id:'taisan',icon:'🏷️',label:'Tài sản'},
+    {id:'bao-tri',icon:'🔧',label:'Bảo trì'},
     {section:'ADMIN'},
+
     {id:'co-so',icon:'🏢',label:'Cơ sở'},
     {id:'users',icon:'👤',label:'Người dùng'},
   ],
@@ -870,6 +910,7 @@ const NAV_CONFIG = {
     {id:'hop-dong',icon:'📋',label:'Hợp đồng'},
     {id:'khach-inout',icon:'👥',label:'Khách in/out'},
     {id:'thu-tien',icon:'💰',label:'Thu tiền'},
+    {id:'bao-tri',icon:'🔧',label:'Bảo trì'},
   ],
   manager: [
     {section:'TÀI CHÍNH'},
@@ -881,6 +922,7 @@ const NAV_CONFIG = {
     {id:'khach-inout',icon:'👥',label:'Khách in/out'},
     {id:'thu-tien',icon:'💰',label:'Thu tiền'},
     {id:'taisan',icon:'🏷️',label:'Tài sản'},
+    {id:'bao-tri',icon:'🔧',label:'Bảo trì'},
   ]
 };
 
@@ -1015,7 +1057,7 @@ function subscribeData() {
   };
   listen('phong','phong'); listen('thu','thu'); listen('no','no');
   listen('hoahong','hoahong'); listen('taisan','taisan');
-  listen('bank','bank'); listen('inout','inout');
+  listen('bank','bank'); listen('inout','inout'); listen('bao-tri','baotri');
 }
 function subscribeUsers() {
   db.collection('users').onSnapshot(snap => { cache.users = snap.docs.map(d=>({id:d.id,...d.data()})); renderUsers(); });
@@ -1032,7 +1074,7 @@ function switchTab(tabId) {
   if (navItem) navItem.classList.add('active');
   const titles = {bank:'Bank – Sao kê','thu-tien':'Thu tiền',kqkd:'Báo cáo KQKD',
     'hop-dong':'Hợp đồng','khach-inout':'Khách in/out',
-    taisan:'Tài sản','co-so':'Cơ sở',users:'Người dùng'};
+    taisan:'Tài sản','bao-tri':'Bảo trì / Bảo dưỡng','co-so':'Cơ sở',users:'Người dùng'};
   document.getElementById('tabTitle').textContent = titles[tabId]||tabId;
   renderAll();
 }
@@ -1072,6 +1114,7 @@ function renderAll() {
   else if (t==='cong-no') renderNo();
   else if (t==='hoa-hong') renderHoaHong();
   else if (t==='taisan') renderTaiSan();
+  else if (t==='bao-tri') renderBaoTri();
   else if (t==='co-so') renderCosos();
   else if (t==='users') renderUsers();
 }
@@ -2498,6 +2541,81 @@ function editTaiSan(id) {
 async function deleteTaiSan(id) {
   if(!confirm('Xoá tài sản này?')) return;
   await db.collection('taisan').doc(id).delete(); toast('Đã xoá','success');
+}
+
+// ===== BAO TRI =====
+function renderBaoTri() {
+  const canEdit = ['owner','manager'].includes(currentRole);
+  const addBtn = document.getElementById('btn-add-baotri');
+  if (addBtn) addBtn.style.display = canEdit ? '' : 'none';
+  // Nếu user đang nhập liệu trong bảng → không re-render
+  const active = document.activeElement;
+  const table = document.getElementById('baotri-table');
+  if (table && table.contains(active)) return;
+
+  const filterEl = document.getElementById('bt-filter');
+  const yearEl   = document.getElementById('bt-year');
+  const q = (filterEl?.value||'').normalize('NFC').toLowerCase();
+  const yr = yearEl?.value||'';
+
+  // Populate year dropdown
+  const years = [...new Set(cache.baotri.map(r=>(r.ngay||'').slice(0,4)).filter(Boolean))].sort((a,b)=>b-a);
+  if (yearEl) {
+    const cur = yearEl.value;
+    yearEl.innerHTML = '<option value="">-- Tất cả năm --</option>' +
+      years.map(y=>`<option value="${y}" ${y===cur?'selected':''}>${y}</option>`).join('');
+  }
+
+  let data = [...cache.baotri].sort((a,b)=>(b.ngay||'').localeCompare(a.ngay||''));
+  if (yr) data = data.filter(r=>(r.ngay||'').startsWith(yr));
+  if (q)  data = data.filter(r=>[r.maTs,r.tenTs,r.vitri,r.dienGiai].join(' ').normalize('NFC').toLowerCase().includes(q));
+
+  const totalCost = data.reduce((s,r)=>s+(Number(r.chiPhi)||0),0);
+  const el = document.getElementById('bt-total');
+  if (el) el.textContent = fmt(totalCost);
+  const elC = document.getElementById('bt-count');
+  if (elC) elC.textContent = data.length;
+
+  const inp = 'border:none;outline:none;width:100%;font-size:12.5px;background:transparent;padding:3px 4px;';
+  const rows = data.map(r=>`<tr id="bt-row-${r.id}">
+    <td style="padding:4px 8px"><input style="${inp}" value="${esc(r.maTs||'')}" placeholder="Mã TS" onblur="saveBaoTriField('${r.id}','maTs',this.value)"></td>
+    <td style="padding:4px 8px"><input style="${inp}" value="${esc(r.tenTs||'')}" placeholder="Tên tài sản" onblur="saveBaoTriField('${r.id}','tenTs',this.value)"></td>
+    <td style="padding:4px 8px"><input style="${inp}" value="${esc(r.vitri||'')}" placeholder="Vị trí" onblur="saveBaoTriField('${r.id}','vitri',this.value)"></td>
+    <td style="padding:4px 8px"><input style="${inp}min-width:180px" value="${esc(r.dienGiai||'')}" placeholder="Diễn giải" onblur="saveBaoTriField('${r.id}','dienGiai',this.value)"></td>
+    <td style="padding:4px 8px"><input type="date" style="${inp}" value="${r.ngay||''}" onblur="saveBaoTriField('${r.id}','ngay',this.value)"></td>
+    <td style="padding:4px 8px"><input type="number" style="${inp}text-align:right" value="${r.chiPhi||''}" placeholder="0" onblur="saveBaoTriField('${r.id}','chiPhi',Number(this.value))"></td>
+    <td style="padding:4px 6px;text-align:center">${['owner','manager'].includes(currentRole)?`<button class="btn btn-danger btn-sm" onclick="deleteBaoTriRow('${r.id}')" title="Xoá">🗑</button>`:''}</td>
+  </tr>`).join('');
+
+  if (table) table.innerHTML = rows || `<tr><td colspan="7"><div class="empty"><div class="icon">🔧</div><p>Chưa có dữ liệu bảo trì</p></div></td></tr>`;
+  const foot = document.getElementById('bt-foot');
+  const footVal = document.getElementById('bt-total-foot');
+  if (foot) foot.style.display = data.length ? '' : 'none';
+  if (footVal) footVal.textContent = data.length ? fmt(totalCost) : '';
+}
+
+async function addBaoTriRow() {
+  if (!selectedCosoId) return;
+  const ref = await db.collection('bao-tri').add({
+    cosoId: selectedCosoId,
+    maTs:'', tenTs:'', vitri:'', dienGiai:'', ngay:'', chiPhi:0,
+    createdAt: FieldValue.serverTimestamp()
+  });
+  setTimeout(()=>{
+    const row = document.getElementById('bt-row-'+ref.id);
+    if (row) row.querySelector('input')?.focus();
+  }, 400);
+}
+
+async function saveBaoTriField(id, field, value) {
+  try { await db.collection('bao-tri').doc(id).update({[field]:value}); }
+  catch(e) { console.error('saveBaoTriField',e); }
+}
+
+async function deleteBaoTriRow(id) {
+  if (!confirm('Xoá dòng bảo trì này?')) return;
+  await db.collection('bao-tri').doc(id).delete();
+  toast('Đã xoá','success');
 }
 
 const QLTS_DATA = [
