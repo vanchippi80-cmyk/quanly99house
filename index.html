@@ -2930,22 +2930,52 @@ function editCoso(id) {
 function populatePhongDropdown(selectedId) {
   const sel = document.getElementById('p-so');
   if(!sel) return;
-  sel.innerHTML = '<option value="">-- Chọn phòng --</option>' +
-    cache.phong.map(p=>`<option value="${p.so}" data-id="${p.id}" ${(selectedId&&p.id===selectedId)||p.so===sel.value?'selected':''}>${p.so}${p.ten?' - '+p.ten:''}</option>`).join('');
+  const isEdit = !!selectedId;
+  if(isEdit) {
+    // Khi sửa: hiện tất cả phòng (bao gồm phòng của HĐ đang sửa)
+    sel.innerHTML = '<option value="">-- Chọn phòng --</option>' +
+      cache.phong.map(p=>`<option value="${p.so}" data-id="${p.id}" ${p.id===selectedId?'selected':''}>${p.so}${p.ten?' - '+p.ten:''}</option>`).join('');
+  } else {
+    // Khi tạo mới: chỉ hiện số phòng (không kèm tên khách), deduplicate
+    const curMap = getCurrentContractMap();
+    const rooms = [...new Map(cache.phong.map(p=>[p.so,p])).values()]
+      .sort((a,b)=>(a.so||'').localeCompare(b.so||''));
+    sel.innerHTML = '<option value="">-- Chọn phòng --</option>' +
+      rooms.map(p=>`<option value="${p.so}" data-so="${p.so}">${p.so}</option>`).join('');
+  }
 }
 function onPhongDropdownChange() {
   const sel = document.getElementById('p-so');
-  const opt = sel.options[sel.selectedIndex];
-  const pid = opt?.dataset?.id;
-  const p = pid ? cache.phong.find(x=>x.id===pid) : null;
+  const so = sel.value;
+  if(!so) return;
+  // Lấy hợp đồng mới nhất của phòng để auto-fill giá (không điền tên khách)
+  const curMap = getCurrentContractMap();
+  const p = curMap.get(so) || cache.phong.find(x=>x.so===so);
   if(p) {
-    if(!document.getElementById('p-gia').value||document.getElementById('p-gia').value==='0') document.getElementById('p-gia').value=p.gia||'';
-    if(!document.getElementById('p-giaDien').value||document.getElementById('p-giaDien').value==='0') document.getElementById('p-giaDien').value=p.giaDien||'';
-    if(!document.getElementById('p-giaNuoc').value||document.getElementById('p-giaNuoc').value==='0') document.getElementById('p-giaNuoc').value=p.giaNuoc||'';
-    // carry over hidden room meta
+    const giaEl = document.getElementById('p-gia');
+    const dienEl = document.getElementById('p-giaDien');
+    const nuocEl = document.getElementById('p-giaNuoc');
+    if(!giaEl.value||giaEl.value==='0') giaEl.value=p.gia||'';
+    if(!dienEl.value||dienEl.value==='0') dienEl.value=p.giaDien||'';
+    if(!nuocEl.value||nuocEl.value==='0') nuocEl.value=p.giaNuoc||'';
+    // Carry over room meta (hidden fields, không liên quan tên khách)
     document.getElementById('p-tang').value=p.tang||'';
     document.getElementById('p-loai').value=p.loai||'';
     document.getElementById('p-dt').value=p.dt||'';
+    // Gợi ý số HĐ tiếp theo
+    const hdEl = document.getElementById('p-soHopDong');
+    if(!hdEl.value) {
+      const existing = cache.phong.filter(x=>x.so===so && x.soHopDong)
+        .map(x=>x.soHopDong).sort();
+      if(existing.length) {
+        // Tăng số thứ tự: P101-001 → P101-002
+        const last = existing[existing.length-1];
+        const match = last.match(/^(.*-)(\d+)$/);
+        if(match) hdEl.value = match[1]+String(Number(match[2])+1).padStart(3,'0');
+      } else {
+        hdEl.value = `${so}-001`;
+      }
+    }
   }
 }
 function editPhong(id) {
