@@ -699,14 +699,18 @@ tr:hover td{background:#fafafa}
       </div>
       <div class="form-row">
         <div class="form-group"><label>Ngày phụ lục</label><input type="date" id="pl-ngay"></div>
+        <div class="form-group"><label>Ngày bắt đầu gia hạn</label><input type="date" id="pl-batdau"></div>
+        <div class="form-group"><label>Ngày kết thúc mới *</label><input type="date" id="pl-ketthuc" style="border-color:#16a34a"></div>
+      </div>
+      <div class="form-row">
         <div class="form-group"><label>Kỳ hạn</label><input type="text" id="pl-kyHan" placeholder="3 tháng"></div>
         <div class="form-group"><label>SL khách</label><input type="number" id="pl-slKhach" min="1"></div>
       </div>
       <input type="hidden" id="pl-ten">
       <div class="form-row">
-        <div class="form-group"><label>Giá thuê</label><input type="number" id="pl-gia"></div>
-        <div class="form-group"><label>Giá điện (đ/số)</label><input type="number" id="pl-giaDien"></div>
-        <div class="form-group"><label>Giá nước (đ/m³)</label><input type="number" id="pl-giaNuoc"></div>
+        <div class="form-group"><label>Giá thuê mới</label><input type="number" id="pl-gia" placeholder="Để trống = giữ nguyên"></div>
+        <div class="form-group"><label>Giá điện (đ/số)</label><input type="number" id="pl-giaDien" placeholder="Để trống = giữ nguyên"></div>
+        <div class="form-group"><label>Giá nước (đ/m³)</label><input type="number" id="pl-giaNuoc" placeholder="Để trống = giữ nguyên"></div>
       </div>
       <div class="form-group"><label>Ghi chú</label><input type="text" id="pl-ghiChu"></div>
     </div>
@@ -1077,7 +1081,13 @@ function fmtNum(n) { return (n||0).toLocaleString('vi-VN'); }
 function daysUntil(dateStr) { if (!dateStr) return 9999; return Math.round((new Date(dateStr)-new Date())/(1000*60*60*24)); }
 function isBankThu(cat) { return CAT_THU.includes(cat); }
 function bankOfMonth(thang) { return cache.bank.filter(b=>b.thang===thang); }
-function thuOfMonth(thang) { return cache.thu.filter(t=>t.thang===thang); }
+function thuOfMonth(thang) {
+  if(thang.endsWith('-00')) {
+    const yr = thang.slice(0,4);
+    return cache.thu.filter(t=>(t.thang||'').startsWith(yr+'-'));
+  }
+  return cache.thu.filter(t=>t.thang===thang);
+}
 function hoaHongOfMonth(thang) { return cache.hoahong.filter(h=>h.thang===thang); }
 function calcDepreciation(asset) {
   const monthly = asset.soTien / (asset.tgKh||1);
@@ -1658,23 +1668,26 @@ function thuTongThu(t) {
 function renderThuMonthNav() {
   const nav = document.getElementById('thu-month-nav');
   if(!nav) return;
-  const cur = getSelMonth(); // "YYYY-MM"
+  const cur = getSelMonth(); // "YYYY-MM" or "YYYY-00"
   const year = parseInt(cur.split('-')[0]);
-  const month = parseInt(cur.split('-')[1]);
+  const month = parseInt(cur.split('-')[1]); // 0 = cả năm
+  const btnBase = 'padding:4px 10px;border-radius:20px;border:none;cursor:pointer;font-size:12px;';
+  const allActive = month===0;
   let html = `<button onclick="changeThuYear(-1)" style="background:none;border:1px solid #d1d5db;border-radius:6px;padding:3px 8px;cursor:pointer;font-size:13px">◀</button>
     <span style="font-weight:700;font-size:14px;min-width:50px;text-align:center">${year}</span>
     <button onclick="changeThuYear(1)" style="background:none;border:1px solid #d1d5db;border-radius:6px;padding:3px 8px;cursor:pointer;font-size:13px">▶</button>`;
+  html+=`<button onclick="updateGlobalMonth('${year}-00')" style="${btnBase}font-weight:${allActive?'700':'400'};background:${allActive?'#0f766e':'#f3f4f6'};color:${allActive?'#fff':'#374151'}">Cả năm</button>`;
   for(let m=1;m<=12;m++){
     const val=`${year}-${String(m).padStart(2,'0')}`;
     const active = m===month;
-    html+=`<button onclick="updateGlobalMonth('${val}')" style="padding:4px 10px;border-radius:20px;border:none;cursor:pointer;font-size:12px;font-weight:${active?'700':'400'};background:${active?'#16a34a':'#f3f4f6'};color:${active?'#fff':'#374151'}">T${m}</button>`;
+    html+=`<button onclick="updateGlobalMonth('${val}')" style="${btnBase}font-weight:${active?'700':'400'};background:${active?'#16a34a':'#f3f4f6'};color:${active?'#fff':'#374151'}">T${m}</button>`;
   }
   nav.innerHTML = html;
 }
 function changeThuYear(dir) {
   const cur = getSelMonth();
   const [y,m] = cur.split('-');
-  updateGlobalMonth(`${parseInt(y)+dir}-${m}`);
+  updateGlobalMonth(`${parseInt(y)+dir}-${m}`); // preserves month or "00"
 }
 function renderThu() {
   renderThuMonthNav();
@@ -1694,7 +1707,8 @@ function renderThu() {
   setCard('thu-s-hh', sumF('hoaHong'));
 
   const total = thuM.reduce((s,t)=>s+thuTongThu(t),0);
-  document.getElementById('thu-count').textContent = `${thuM.length} dòng | Tổng: ${fmt(total)}`;
+  const periodLabel = thang.endsWith('-00') ? `Năm ${thang.slice(0,4)}` : `Tháng ${thang.slice(5,7)}/${thang.slice(0,4)}`;
+  document.getElementById('thu-count').textContent = `${thuM.length} dòng | ${periodLabel} | Tổng: ${fmt(total)}`;
   const canEdit = ['owner','manager'].includes(currentRole);
   const thAction = document.getElementById('thu-th-action');
   if(thAction) thAction.textContent = canEdit?'Xử lý':'';
@@ -1735,7 +1749,7 @@ function renderThu() {
     </tr>`;
   }).join('');
   document.getElementById('thu-table').innerHTML = rows ||
-    `<tr><td colspan="18" style="text-align:center;padding:24px;color:#9ca3af">Chưa có khoản thu tháng ${thang}</td></tr>`;
+    `<tr><td colspan="18" style="text-align:center;padding:24px;color:#9ca3af">Chưa có khoản thu${thang.endsWith('-00')?` năm ${thang.slice(0,4)}`:`  tháng ${thang}`}</td></tr>`;
 }
 
 async function deleteThu(id) {
@@ -2278,7 +2292,7 @@ function renderHopDong() {
         <td style="position:sticky;left:0;z-index:10;${plBg};min-width:70px;color:#92400e;font-size:11px">↳ ${p.so}</td>
         <td style="position:sticky;left:70px;z-index:10;${plBg};min-width:110px">${pl.soHopDong||p.soHopDong||''}</td>
         <td style="position:sticky;left:180px;z-index:10;${plBg};min-width:130px;color:#92400e;font-size:11px">Phụ lục ${idx+1}</td>
-        <td>${fmtNgay(pl.ngay)}</td>
+        <td style="font-size:11px">${fmtNgay(pl.batdau||pl.ngay)} → ${pl.ketthuc?fmtNgay(pl.ketthuc):'?'}</td>
         <td>${pl.ten||p.ten||''}</td>
         <td>${p.sdt||''}</td>
         <td style="text-align:center">${pl.slKhach||''}</td>
@@ -3017,7 +3031,7 @@ function openPhuLucModal(phongId) {
   const sel = document.getElementById('pl-phong');
   sel.innerHTML = '<option value="">-- Chọn phòng --</option>' +
     uniqueRooms.map(p=>`<option value="${p.so}">${p.so}</option>`).join('');
-  ['ngay','kyHan','slKhach','gia','giaDien','giaNuoc','ghiChu'].forEach(k=>{
+  ['ngay','batdau','ketthuc','kyHan','slKhach','gia','giaDien','giaNuoc','ghiChu'].forEach(k=>{
     const el=document.getElementById('pl-'+k); if(el) el.value='';
   });
   document.getElementById('pl-ngay').value = new Date().toISOString().split('T')[0];
@@ -3033,13 +3047,19 @@ function onPhuLucPhongChange() {
   hdSel.innerHTML = contracts.length
     ? contracts.map(p=>`<option value="${p.soHopDong}">${p.soHopDong}${p.ten?' - '+p.ten:''}</option>`).join('')
     : '<option value="">-- Chưa có hợp đồng --</option>';
-  // Auto-fill giá từ hợp đồng mới nhất
+  // Auto-fill từ hợp đồng/phụ lục mới nhất
   const latest = contracts[0];
   if(latest) {
-    if(!document.getElementById('pl-gia').value) document.getElementById('pl-gia').value=latest.gia||'';
-    if(!document.getElementById('pl-giaDien').value) document.getElementById('pl-giaDien').value=latest.giaDien||'';
-    if(!document.getElementById('pl-giaNuoc').value) document.getElementById('pl-giaNuoc').value=latest.giaNuoc||'';
-    if(!document.getElementById('pl-kyHan').value) document.getElementById('pl-kyHan').value=latest.kyHan||'';
+    // Lấy phụ lục mới nhất nếu có
+    const latestPL = (latest.phuLuc||[]).slice(-1)[0];
+    const src = latestPL || latest;
+    if(!document.getElementById('pl-gia').value) document.getElementById('pl-gia').value=src.gia||latest.gia||'';
+    if(!document.getElementById('pl-giaDien').value) document.getElementById('pl-giaDien').value=src.giaDien||latest.giaDien||'';
+    if(!document.getElementById('pl-giaNuoc').value) document.getElementById('pl-giaNuoc').value=src.giaNuoc||latest.giaNuoc||'';
+    if(!document.getElementById('pl-kyHan').value) document.getElementById('pl-kyHan').value=src.kyHan||latest.kyHan||'';
+    // Batdau = ngày kết thúc của HĐ/phụ lục trước
+    const prevEnd = latestPL?.ketthuc || latest.ketthuc || '';
+    if(prevEnd && !document.getElementById('pl-batdau').value) document.getElementById('pl-batdau').value=prevEnd;
   }
 }
 async function savePhuLuc() {
@@ -3050,20 +3070,32 @@ async function savePhuLuc() {
   // Tìm doc phòng tương ứng với hợp đồng đã chọn
   const p = cache.phong.find(x=>x.so===so && x.soHopDong===soHopDong) || cache.phong.find(x=>x.so===so);
   if(!p) { toast('Không tìm thấy hợp đồng','error'); return; }
+  const ketthucMoi = document.getElementById('pl-ketthuc').value;
+  const giaMoi     = Number(document.getElementById('pl-gia').value)||0;
+  const giaDienMoi = Number(document.getElementById('pl-giaDien').value)||0;
+  const giaNuocMoi = Number(document.getElementById('pl-giaNuoc').value)||0;
   const pl = {
     soHopDong,
-    ngay: document.getElementById('pl-ngay').value,
-    slKhach: Number(document.getElementById('pl-slKhach').value)||0,
-    kyHan: document.getElementById('pl-kyHan').value,
-    gia: Number(document.getElementById('pl-gia').value)||0,
-    giaDien: Number(document.getElementById('pl-giaDien').value)||0,
-    giaNuoc: Number(document.getElementById('pl-giaNuoc').value)||0,
-    ghiChu: document.getElementById('pl-ghiChu').value,
+    ngay:     document.getElementById('pl-ngay').value,
+    batdau:   document.getElementById('pl-batdau').value,
+    ketthuc:  ketthucMoi,
+    slKhach:  Number(document.getElementById('pl-slKhach').value)||0,
+    kyHan:    document.getElementById('pl-kyHan').value,
+    gia:      giaMoi,
+    giaDien:  giaDienMoi,
+    giaNuoc:  giaNuocMoi,
+    ghiChu:   document.getElementById('pl-ghiChu').value,
     createdAt: Date.now()
   };
   const existing = p.phuLuc || [];
-  await db.collection('phong').doc(p.id).update({ phuLuc: [...existing, pl] });
-  toast('Đã thêm phụ lục','success');
+  // Cập nhật phụ lục + đồng thời cập nhật HĐ gốc: ketthuc, giá mới
+  const parentUpdate = { phuLuc: [...existing, pl] };
+  if(ketthucMoi) parentUpdate.ketthuc = ketthucMoi;
+  if(giaMoi)     parentUpdate.gia     = giaMoi;
+  if(giaDienMoi) parentUpdate.giaDien = giaDienMoi;
+  if(giaNuocMoi) parentUpdate.giaNuoc = giaNuocMoi;
+  await db.collection('phong').doc(p.id).update(parentUpdate);
+  toast('Đã thêm phụ lục – hợp đồng đã cập nhật ngày & giá mới','success');
   closeModal('modal-phuLuc');
 }
 async function deletePhuLuc(phongId, idx) {
