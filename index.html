@@ -1057,7 +1057,7 @@ function subscribeData() {
   };
   listen('phong','phong'); listen('thu','thu'); listen('no','no');
   listen('hoahong','hoahong'); listen('taisan','taisan');
-  listen('bank','bank'); listen('inout','inout'); listen('bao-tri','baotri');
+  listen('bank','bank'); listen('inout','inout'); listen('baotri','baotri');
 }
 function subscribeUsers() {
   db.collection('users').onSnapshot(snap => { cache.users = snap.docs.map(d=>({id:d.id,...d.data()})); renderUsers(); });
@@ -2595,27 +2595,34 @@ function renderBaoTri() {
 }
 
 async function addBaoTriRow() {
-  if (!selectedCosoId) return;
-  const ref = await db.collection('bao-tri').add({
-    cosoId: selectedCosoId,
-    maTs:'', tenTs:'', vitri:'', dienGiai:'', ngay:'', chiPhi:0,
-    createdAt: FieldValue.serverTimestamp()
-  });
-  setTimeout(()=>{
-    const row = document.getElementById('bt-row-'+ref.id);
-    if (row) row.querySelector('input')?.focus();
-  }, 400);
+  if (!selectedCosoId) { toast('Chưa chọn cơ sở','error'); return; }
+  try {
+    const ref = await db.collection('baotri').add({
+      cosoId: selectedCosoId,
+      maTs:'', tenTs:'', vitri:'', dienGiai:'', ngay:'', chiPhi:0,
+      createdAt: FieldValue.serverTimestamp()
+    });
+    setTimeout(()=>{
+      const row = document.getElementById('bt-row-'+ref.id);
+      if (row) row.querySelector('input')?.focus();
+    }, 500);
+  } catch(e) {
+    toast('Lỗi thêm dòng: '+e.message,'error');
+    console.error('addBaoTriRow',e);
+  }
 }
 
 async function saveBaoTriField(id, field, value) {
-  try { await db.collection('bao-tri').doc(id).update({[field]:value}); }
-  catch(e) { console.error('saveBaoTriField',e); }
+  try { await db.collection('baotri').doc(id).update({[field]:value}); }
+  catch(e) { toast('Lỗi lưu: '+e.message,'error'); console.error('saveBaoTriField',e); }
 }
 
 async function deleteBaoTriRow(id) {
   if (!confirm('Xoá dòng bảo trì này?')) return;
-  await db.collection('bao-tri').doc(id).delete();
-  toast('Đã xoá','success');
+  try {
+    await db.collection('baotri').doc(id).delete();
+    toast('Đã xoá','success');
+  } catch(e) { toast('Lỗi xoá: '+e.message,'error'); }
 }
 
 const QLTS_DATA = [
