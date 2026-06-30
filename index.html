@@ -2548,51 +2548,65 @@ function renderBaoTri() {
   const canEdit = ['owner','manager'].includes(currentRole);
   const addBtn = document.getElementById('btn-add-baotri');
   if (addBtn) addBtn.style.display = canEdit ? '' : 'none';
-  // Nếu user đang nhập liệu trong bảng → không re-render
-  const active = document.activeElement;
-  const table = document.getElementById('baotri-table');
-  if (table && table.contains(active)) return;
+
+  // Lưu focus trước khi render
+  const activeEl = document.activeElement;
+  const focusId   = activeEl?.dataset?.btId;
+  const focusField = activeEl?.dataset?.btField;
 
   const filterEl = document.getElementById('bt-filter');
   const yearEl   = document.getElementById('bt-year');
-  const q = (filterEl?.value||'').normalize('NFC').toLowerCase();
+  const q  = (filterEl?.value||'').normalize('NFC').toLowerCase();
   const yr = yearEl?.value||'';
 
-  // Populate year dropdown
-  const years = [...new Set(cache.baotri.map(r=>(r.ngay||'').slice(0,4)).filter(Boolean))].sort((a,b)=>b-a);
+  const years = [...new Set((cache.baotri||[]).map(r=>(r.ngay||'').slice(0,4)).filter(Boolean))].sort((a,b)=>b-a);
   if (yearEl) {
     const cur = yearEl.value;
     yearEl.innerHTML = '<option value="">-- Tất cả năm --</option>' +
       years.map(y=>`<option value="${y}" ${y===cur?'selected':''}>${y}</option>`).join('');
   }
 
-  let data = [...cache.baotri].sort((a,b)=>(b.ngay||'').localeCompare(a.ngay||''));
+  let data = [...(cache.baotri||[])].sort((a,b)=>(b.ngay||'').localeCompare(a.ngay||''));
   if (yr) data = data.filter(r=>(r.ngay||'').startsWith(yr));
   if (q)  data = data.filter(r=>[r.maTs,r.tenTs,r.vitri,r.dienGiai].join(' ').normalize('NFC').toLowerCase().includes(q));
 
   const totalCost = data.reduce((s,r)=>s+(Number(r.chiPhi)||0),0);
-  const el = document.getElementById('bt-total');
-  if (el) el.textContent = fmt(totalCost);
-  const elC = document.getElementById('bt-count');
-  if (elC) elC.textContent = data.length;
+  const elTotal = document.getElementById('bt-total');
+  if (elTotal) elTotal.textContent = fmt(totalCost);
+  const elCount = document.getElementById('bt-count');
+  if (elCount) elCount.textContent = data.length;
+
+  const table = document.getElementById('baotri-table');
+  if (!table) return;
 
   const inp = 'border:none;outline:none;width:100%;font-size:12.5px;background:transparent;padding:3px 4px;';
-  const h = s => (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
-  const rows = data.map(r=>`<tr id="bt-row-${r.id}">
-    <td style="padding:4px 8px"><input style="${inp}" value="${h(r.maTs)}" placeholder="Mã TS" onblur="saveBaoTriField('${r.id}','maTs',this.value)"></td>
-    <td style="padding:4px 8px"><input style="${inp}" value="${h(r.tenTs)}" placeholder="Tên tài sản" onblur="saveBaoTriField('${r.id}','tenTs',this.value)"></td>
-    <td style="padding:4px 8px"><input style="${inp}" value="${h(r.vitri)}" placeholder="Vị trí" onblur="saveBaoTriField('${r.id}','vitri',this.value)"></td>
-    <td style="padding:4px 8px"><input style="${inp}min-width:180px" value="${h(r.dienGiai)}" placeholder="Diễn giải" onblur="saveBaoTriField('${r.id}','dienGiai',this.value)"></td>
-    <td style="padding:4px 8px"><input type="date" style="${inp}" value="${r.ngay||''}" onblur="saveBaoTriField('${r.id}','ngay',this.value)"></td>
-    <td style="padding:4px 8px"><input type="number" style="${inp}text-align:right" value="${r.chiPhi||''}" placeholder="0" onblur="saveBaoTriField('${r.id}','chiPhi',Number(this.value))"></td>
-    <td style="padding:4px 6px;text-align:center">${canEdit?`<button class="btn btn-danger btn-sm" onclick="deleteBaoTriRow('${r.id}')" title="Xoá">🗑</button>`:''}</td>
-  </tr>`).join('');
+  const hh = s => String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+  const del = canEdit ? (id=>`<button class="btn btn-danger btn-sm" onclick="deleteBaoTriRow('${id}')" title="Xoá">🗑</button>`) : ()=>'';
 
-  if (table) table.innerHTML = rows || `<tr><td colspan="7"><div class="empty"><div class="icon">🔧</div><p>Chưa có dữ liệu bảo trì</p></div></td></tr>`;
+  if (data.length === 0) {
+    table.innerHTML = `<tr><td colspan="7"><div class="empty"><div class="icon">🔧</div><p>Chưa có dữ liệu bảo trì</p></div></td></tr>`;
+  } else {
+    table.innerHTML = data.map(r=>`<tr id="bt-row-${r.id}">
+      <td style="padding:3px 6px"><input data-bt-id="${r.id}" data-bt-field="maTs" style="${inp}" value="${hh(r.maTs)}" placeholder="Mã TS" onblur="saveBaoTriField('${r.id}','maTs',this.value)"></td>
+      <td style="padding:3px 6px"><input data-bt-id="${r.id}" data-bt-field="tenTs" style="${inp}" value="${hh(r.tenTs)}" placeholder="Tên TS" onblur="saveBaoTriField('${r.id}','tenTs',this.value)"></td>
+      <td style="padding:3px 6px"><input data-bt-id="${r.id}" data-bt-field="vitri" style="${inp}" value="${hh(r.vitri)}" placeholder="Vị trí" onblur="saveBaoTriField('${r.id}','vitri',this.value)"></td>
+      <td style="padding:3px 6px"><input data-bt-id="${r.id}" data-bt-field="dienGiai" style="${inp}min-width:180px" value="${hh(r.dienGiai)}" placeholder="Diễn giải" onblur="saveBaoTriField('${r.id}','dienGiai',this.value)"></td>
+      <td style="padding:3px 6px"><input type="date" data-bt-id="${r.id}" data-bt-field="ngay" style="${inp}" value="${r.ngay||''}" onchange="saveBaoTriField('${r.id}','ngay',this.value)"></td>
+      <td style="padding:3px 6px"><input type="number" data-bt-id="${r.id}" data-bt-field="chiPhi" style="${inp}text-align:right" value="${r.chiPhi||''}" placeholder="0" onblur="saveBaoTriField('${r.id}','chiPhi',Number(this.value))"></td>
+      <td style="padding:3px 6px;text-align:center">${del(r.id)}</td>
+    </tr>`).join('');
+  }
+
   const foot = document.getElementById('bt-foot');
   const footVal = document.getElementById('bt-total-foot');
   if (foot) foot.style.display = data.length ? '' : 'none';
   if (footVal) footVal.textContent = data.length ? fmt(totalCost) : '';
+
+  // Khôi phục focus sau khi render
+  if (focusId && focusField) {
+    const inp2 = table.querySelector(`input[data-bt-id="${focusId}"][data-bt-field="${focusField}"]`);
+    if (inp2) inp2.focus();
+  }
 }
 
 async function addBaoTriRow() {
