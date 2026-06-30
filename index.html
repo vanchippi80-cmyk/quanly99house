@@ -2882,12 +2882,12 @@ function openModal(id) {
   if (id==='modal-phong') {
     document.getElementById('modal-phong').dataset.editId='';
     populatePhongDropdown();
-    // reset contract fields
     ['ten','sdt','batdau','ketthuc','coc','soHopDong','ngayHopDong','slKhach','kyHan','giaDien','giaNuoc','ghiChu','gia'].forEach(k=>{
       const el=document.getElementById('p-'+k); if(el) el.value='';
     });
     document.getElementById('p-tt').value='Đang thuê';
     document.getElementById('p-noiDung').value='Hợp đồng thuê';
+    document.querySelector('#modal-phong .modal-header h3').textContent='📋 Thêm hợp đồng';
   }
   if (id==='modal-ql-phong') { renderQlPhong(); document.getElementById('ql-phong-add-row').style.display='none'; }
   if (id==='modal-inout') {
@@ -2980,8 +2980,9 @@ function onPhongDropdownChange() {
 }
 function editPhong(id) {
   const p=cache.phong.find(x=>x.id===id); if(!p) return;
+  // Mở modal trước (reset fields), rồi điền dữ liệu sau
+  openModal('modal-phong');
   populatePhongDropdown(id);
-  // set dropdown to this room's so
   const sel=document.getElementById('p-so');
   for(let i=0;i<sel.options.length;i++) if(sel.options[i].value===p.so){sel.selectedIndex=i;break;}
   ['tang','loai','dt','gia','tt','ten','sdt','batdau','ketthuc','coc',
@@ -2989,7 +2990,7 @@ function editPhong(id) {
     const el=document.getElementById('p-'+k); if(el) el.value=p[k]||'';
   });
   document.getElementById('modal-phong').dataset.editId=id;
-  openModal('modal-phong');
+  document.querySelector('#modal-phong .modal-header h3').textContent='✏️ Sửa hợp đồng';
 }
 // Danh mục phòng (danh mục)
 function showAddPhongRow() { document.getElementById('ql-phong-add-row').style.display='block'; }
