@@ -327,6 +327,7 @@ tr:hover td{background:#fafafa}
               <th style="position:sticky;top:0;z-index:20;background:#14532d;padding:8px 10px">SL người</th>
               <th style="position:sticky;top:0;z-index:20;background:#14532d;padding:8px 10px">ĐG nước</th>
               <th style="position:sticky;top:0;z-index:20;background:#14532d;padding:8px 10px">Tiền nước</th>
+              <th style="position:sticky;top:0;z-index:20;background:#14532d;padding:8px 10px">Phí khác</th>
               <th style="position:sticky;top:0;z-index:20;background:#14532d;padding:8px 10px;font-weight:700">Tổng thu</th>
               <th style="position:sticky;top:0;z-index:20;background:#14532d;padding:8px 10px">Hoa hồng</th>
               <th style="position:sticky;top:0;z-index:20;background:#14532d;padding:8px 10px" id="thu-th-action"></th>
@@ -1635,7 +1636,7 @@ function exportBankCSV() {
 // ===== THU TIEN =====
 function thuSd(t) { return (t.dienMoi||0)-(t.dienCu||0); }
 function thuTongThu(t) {
-  return (t.tienCoc||0)+(t.tienThue||t.sotien||0)+(t.tienDien||0)+(t.tienNuoc||0);
+  return (t.tienCoc||0)+(t.tienThue||t.sotien||0)+(t.tienDien||0)+(t.tienNuoc||0)+(t.phiKhac||0);
 }
 function renderThuMonthNav() {
   const nav = document.getElementById('thu-month-nav');
@@ -1707,6 +1708,7 @@ function renderThu() {
       ${td(t.nuocSL||'')}
       ${td(t.nuocGia?fmt(t.nuocGia):'')}
       ${td(t.tienNuoc?fmt(t.tienNuoc):'')}
+      ${td(t.phiKhac?fmt(t.phiKhac):'')}
       ${td(tong?`<b style="color:#059669">${fmt(tong)}</b>`:'')}
       ${td(t.hoaHong?fmt(t.hoaHong):'')}
       <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6;white-space:nowrap">
@@ -1770,6 +1772,7 @@ function editThuRow(id) {
     <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6">${inp('slNguoi','number',t.nuocSL||0)}</td>
     <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6">${inp('donGiaNuoc','number',t.nuocGia||50000)}</td>
     <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6;text-align:right;font-weight:700"><span id="tre-tienNuoc">0</span></td>
+    <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6">${inp('phiKhac','number',t.phiKhac||0)}</td>
     <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6;text-align:right;font-weight:700;color:#059669"><span id="tre-tong">0</span></td>
     <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6">${inp('hoaHong','number',t.hoaHong||0)}</td>
     <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6;white-space:nowrap">
@@ -1794,7 +1797,8 @@ function calcThuEditRow() {
   const sd = moi-cu, tienDien=sd*gia, tienNuoc=sl*giaN;
   const tienCoc = Number(document.getElementById('tre-tienCoc')?.value)||0;
   const tienThue = Number(document.getElementById('tre-tienThue')?.value)||0;
-  const tong = tienCoc+tienThue+tienDien+tienNuoc;
+  const phiKhac = Number(document.getElementById('tre-phiKhac')?.value)||0;
+  const tong = tienCoc+tienThue+tienDien+tienNuoc+phiKhac;
   const el = s => document.getElementById(s);
   if(el('tre-sd')) el('tre-sd').textContent = sd||0;
   if(el('tre-tienDien')) el('tre-tienDien').textContent = fmtNum(tienDien);
@@ -1847,7 +1851,8 @@ async function saveThuEdit(id) {
     tienCoc, tienThue, sotien: tienThue,
     dienCu: cu, dienMoi: moi, dienGia: giaD, tienDien,
     nuocSL: sl, nuocGia: giaN, tienNuoc, hoaHong,
-    tongThu: tienCoc+tienThue+tienDien+tienNuoc,
+    phiKhac: Number(document.getElementById('tre-phiKhac')?.value)||0,
+    tongThu: tienCoc+tienThue+tienDien+tienNuoc+(Number(document.getElementById('tre-phiKhac')?.value)||0),
   };
   closeThuEdit();
   try {
@@ -1895,6 +1900,7 @@ function addThuRow() {
     <td style="padding:4px 6px">${inp('slNguoi','number','')}</td>
     <td style="padding:4px 6px">${inp('donGiaNuoc','number','50000')}</td>
     <td style="padding:4px 6px;font-weight:700;text-align:right"><span id="tri-tienNuoc">0</span></td>
+    <td style="padding:4px 6px">${inp('phiKhac','number','0')}</td>
     <td style="padding:4px 6px;font-weight:700;color:#059669;text-align:right"><span id="tri-tong">0</span></td>
     <td style="padding:4px 6px">${inp('hoaHong','number','0')}</td>
     <td style="padding:4px 6px;white-space:nowrap">
@@ -1942,7 +1948,8 @@ function calcThuRow() {
   const tienNuoc = slNuoc * giaNuoc;
   const tienCoc = Number(document.getElementById('tri-tienCoc')?.value)||0;
   const tienThue = Number(document.getElementById('tri-tienThue')?.value)||0;
-  const tong = tienCoc + tienThue + tienDien + tienNuoc;
+  const phiKhacR = Number(document.getElementById('tri-phiKhac')?.value)||0;
+  const tong = tienCoc + tienThue + tienDien + tienNuoc + phiKhacR;
   const el = id => document.getElementById(id);
   if(el('tri-sd')) el('tri-sd').textContent = sd||0;
   if(el('tri-tienDien')) el('tri-tienDien').textContent = fmtNum(tienDien);
@@ -1963,6 +1970,7 @@ async function saveThuRow() {
   const tienNuoc = slNuoc*giaN;
   const tienCoc = Number(document.getElementById('tri-tienCoc').value)||0;
   const tienThue = Number(document.getElementById('tri-tienThue').value)||0;
+  const phiKhac = Number(document.getElementById('tri-phiKhac').value)||0;
   const data = {
     cosoId: selectedCosoId,
     ngay, thang: ngay.slice(0,7),
@@ -1971,8 +1979,9 @@ async function saveThuRow() {
     tienCoc, tienThue, sotien: tienThue,
     dienCu: cu, dienMoi: moi, dienGia: giaD, tienDien,
     nuocSL: slNuoc, nuocGia: giaN, tienNuoc,
+    phiKhac,
     hoaHong: Number(document.getElementById('tri-hoaHong').value)||0,
-    tongThu: tienCoc+tienThue+tienDien+tienNuoc,
+    tongThu: tienCoc+tienThue+tienDien+tienNuoc+phiKhac,
     loai: 'Tiền thuê',
     createdAt: FieldValue.serverTimestamp(), createdBy: currentUser.uid
   };
