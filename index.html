@@ -339,6 +339,21 @@ tr:hover td{background:#fafafa}
       </div>
     </div>
 
+    <!-- BAO CAO DOANH THU TAB -->
+    <div class="tab-pane" id="tab-bao-cao">
+      <div style="display:flex;gap:10px;margin-bottom:12px;align-items:center;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:6px">
+          <label style="font-size:12px;color:#374151;font-weight:600">Năm:</label>
+          <input type="number" id="bc-year" min="2020" max="2035"
+            style="padding:5px 10px;border-radius:7px;border:1.5px solid #e5e7eb;font-size:13px;width:90px;font-weight:600"
+            onchange="renderBaoCao()">
+        </div>
+        <button class="btn btn-secondary" onclick="window.print()">🖨 In báo cáo</button>
+      </div>
+      <div id="bc-cards" class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px"></div>
+      <div id="bc-table-wrap" style="overflow-x:auto;overflow-y:auto;max-height:70vh"></div>
+    </div>
+
     <!-- KQKD TAB -->
     <div class="tab-pane" id="tab-kqkd">
       <div style="display:flex;gap:10px;margin-bottom:12px;align-items:center;flex-wrap:wrap">
@@ -833,7 +848,7 @@ const NAV_CONFIG = {
   owner: [
     {section:'TÀI CHÍNH'},
     {id:'bank',icon:'🏦',label:'Bank (Sao kê)'},
-    {id:'thu-tien',icon:'📊',label:'Báo cáo doanh thu'},
+    {id:'bao-cao',icon:'📊',label:'Báo cáo doanh thu'},
     {id:'kqkd',icon:'📈',label:'Báo cáo KQKD'},
     {section:'KHÁCH THUÊ'},
     {id:'hop-dong',icon:'📋',label:'Hợp đồng'},
@@ -853,7 +868,7 @@ const NAV_CONFIG = {
   manager: [
     {section:'TÀI CHÍNH'},
     {id:'bank',icon:'🏦',label:'Bank (Sao kê)'},
-    {id:'thu-tien',icon:'📊',label:'Báo cáo doanh thu'},
+    {id:'bao-cao',icon:'📊',label:'Báo cáo doanh thu'},
     {id:'kqkd',icon:'📈',label:'Báo cáo KQKD'},
     {section:'KHÁCH THUÊ'},
     {id:'hop-dong',icon:'📋',label:'Hợp đồng'},
@@ -1044,6 +1059,7 @@ function renderAll() {
   const t = currentTab;
   if (t==='bank') renderBank();
   else if (t==='thu-tien') renderThu();
+  else if (t==='bao-cao') renderBaoCao();
   else if (t==='kqkd') renderKQKD();
   else if (t==='hop-dong') renderHopDong();
   else if (t==='khach-inout') renderKhachInOut();
@@ -1998,12 +2014,88 @@ async function saveThuRow() {
   toast('Đã lưu','success');
 }
 
+// ===== BAO CAO DOANH THU =====
+function renderBaoCao() {
+  const thang = getSelMonth();
+  const [yrSel] = thang.split('-');
+
+  const yrInp = document.getElementById('bc-year');
+  if (yrInp && !yrInp.value) yrInp.value = yrSel;
+  const yr = yrInp?.value || yrSel;
+
+  const months = Array.from({length:12},(_,i)=>i+1);
+
+  const mData = months.map(m => {
+    const mn2 = String(m).padStart(2,'0');
+    const thangKey = `${yr}-${mn2}`;
+    const rows = cache.thu.filter(t=>t.thang===thangKey);
+    const sumF = key => rows.reduce((s,t)=>s+(t[key]||0),0);
+    const tienThue = rows.reduce((s,t)=>s+(t.tienThue||t.sotien||0),0);
+    const tienDien = sumF('tienDien');
+    const tienNuoc = sumF('tienNuoc');
+    const phiKhac  = sumF('phiKhac');
+    const tongDT   = tienThue + tienDien + tienNuoc + phiKhac;
+    const tienCoc  = sumF('tienCoc');
+    const tongThu  = tongDT + tienCoc;
+    return {m, tienThue, tienDien, tienNuoc, phiKhac, tongDT, tienCoc, tongThu};
+  });
+
+  const sumAll = fn => mData.reduce((s,d)=>s+fn(d),0);
+  const totalDT  = sumAll(d=>d.tongDT);
+  const totalCoc = sumAll(d=>d.tienCoc);
+  const totalThu = sumAll(d=>d.tongThu);
+
+  document.getElementById('bc-cards').innerHTML = `
+    <div class="stat-card green"><div class="lbl">Tổng doanh thu</div><div class="val" style="color:#166534">${fmt(totalDT)}</div><div class="sub">Năm ${yr}</div></div>
+    <div class="stat-card blue"><div class="lbl">Tiền cọc</div><div class="val" style="color:#1d4ed8">${fmt(totalCoc)}</div><div class="sub">Năm ${yr}</div></div>
+    <div class="stat-card green"><div class="lbl">Tổng thu</div><div class="val" style="color:#059669">${fmt(totalThu)}</div><div class="sub">Năm ${yr}</div></div>`;
+
+  const f0 = v => v ? fmt(v) : '';
+  const thSt = 'text-align:right;padding:6px 8px;min-width:90px;font-size:11px;white-space:nowrap;position:sticky;top:0;z-index:20';
+  const tdV   = v => `<td style="text-align:right;padding:5px 8px;font-size:12px;border-bottom:1px solid #f3f4f6">${f0(v)}</td>`;
+  const tdTot = (v,color='#111827') => `<td style="text-align:right;padding:5px 8px;font-size:12px;font-weight:700;border-bottom:1px solid #e5e7eb;background:#f9fafb;color:${color}">${f0(v)}</td>`;
+  const lblCell = (txt,bg,bold,color) =>
+    `<td style="padding:6px 14px;font-size:12px;${bold?'font-weight:700;':''}color:${color};position:sticky;left:0;background:${bg};z-index:10;border-bottom:1px solid #e5e7eb;border-right:2px solid #e5e7eb;white-space:nowrap">${txt}</td>`;
+
+  const ROWS = [
+    {key:'tienThue', label:'Tiền thuê', bold:false, color:'#111827', bg:'#fff'},
+    {key:'tienDien', label:'Tiền điện', bold:false, color:'#111827', bg:'#fff'},
+    {key:'tienNuoc', label:'Tiền nước', bold:false, color:'#111827', bg:'#fff'},
+    {key:'phiKhac',  label:'Phí khác',  bold:false, color:'#111827', bg:'#fff'},
+    {key:'tongDT',   label:'Tổng DT',   bold:true,  color:'#166534', bg:'#dcfce7'},
+    {key:'tienCoc',  label:'Tiền cọc',  bold:false, color:'#1d4ed8', bg:'#eff6ff'},
+    {key:'tongThu',  label:'Tổng thu',  bold:true,  color:'#059669', bg:'#f0fdf4'},
+  ];
+
+  let t = `<table style="width:100%;border-collapse:separate;border-spacing:0;font-size:12px">
+  <thead><tr style="background:#14532d;color:#fff">
+    <th style="text-align:left;padding:8px 14px;position:sticky;top:0;left:0;background:#14532d;z-index:30;min-width:130px">Hạng mục</th>
+    ${months.map(m=>`<th style="${thSt};background:#14532d">T${m}</th>`).join('')}
+    <th style="${thSt};background:#0f3d1f">Cả năm</th>
+  </tr></thead><tbody>`;
+
+  ROWS.forEach(r => {
+    const vals = mData.map(d=>d[r.key]||0);
+    const tot  = vals.reduce((s,v)=>s+v,0);
+    t += `<tr style="background:${r.bg}">
+      ${lblCell(r.label, r.bg, r.bold, r.color)}
+      ${vals.map(v => r.bold
+        ? `<td style="text-align:right;padding:5px 8px;font-size:12px;font-weight:700;color:${r.color};border-bottom:1px solid #e5e7eb;background:${r.bg}">${f0(v)}</td>`
+        : tdV(v)
+      ).join('')}
+      ${tdTot(tot, r.color)}
+    </tr>`;
+  });
+
+  t += `</tbody></table>`;
+  document.getElementById('bc-table-wrap').innerHTML = t;
+}
+
 // ===== KQKD =====
 function renderKQKD() {
   const thang = getSelMonth();
   const [yrSel, mnSel] = thang.split('-');
 
-  // Year for the main table
   const yrInp = document.getElementById('kqkd-year');
   if (yrInp && !yrInp.value) yrInp.value = yrSel;
   const yr = (yrInp?.value) || yrSel;
@@ -2012,29 +2104,17 @@ function renderKQKD() {
   const cosoName = (coso?.ten||'Cơ sở').toUpperCase();
   const initSoDu = coso?.soDuInitial || 0;
 
-  // Build running balance map for ALL bank transactions
   const allSorted = [...cache.bank].sort((a,b)=>(a.ngay||'').localeCompare(b.ngay||'')||(a.id||'').localeCompare(b.id||''));
   let running = initSoDu;
   const soDuMap = {};
   allSorted.forEach(b => { running += (b.thu||0)-(b.chi||0); soDuMap[b.id]=running; });
 
-  // Helper: get soDu at end of date (exclusive upper bound, 'YYYY-MM-DD')
   function soDuBefore(dateStr) {
     const prev = allSorted.filter(b=>b.ngay && b.ngay < dateStr);
     return prev.length ? soDuMap[prev[prev.length-1].id] : initSoDu;
   }
 
-  // Doanh thu rows: only Phí thuê + Phí dịch vụ + Lãi NH (excludes Tiền cọc and extras)
-  const THU_FIXED = [
-    {key:'Tiền thuê',   label:'Phí thuê'},
-    {key:'Phí dịch vụ', label:'Phí dịch vụ'},
-    {key:'Lãi NH',      label:'Lãi bank'},
-  ];
-  const THU_ROWS = THU_FIXED;
-
   const norm = s => (s||'').normalize('NFC').trim();
-
-  // Chi rows: fixed template order + any extra categories found in data
   const CHI_FIXED = ['Dọn dẹp','Hoa hồng','Đồ dùng','Điện thoại','Điện','Nước','Internet','Sửa chữa','Bể bơi','Thuế','Rác','Khác'];
   const thuCatsNorm = getAllThuCats().map(t=>norm(t));
   const chiExtra = [...new Set(
@@ -2043,43 +2123,33 @@ function renderKQKD() {
   )].filter(c=>!CHI_FIXED.includes(c) && !thuCatsNorm.includes(c));
   const CHI_ROWS = [...CHI_FIXED, ...chiExtra];
 
-  // Calculate data for each month
   const months = Array.from({length:12},(_,i)=>i+1);
   const mData = months.map(m => {
     const mn2 = String(m).padStart(2,'0');
     const thangKey = `${yr}-${mn2}`;
     const bk = allSorted.filter(b=>b.thang===thangKey);
-
-    // All revenue from bank
-    const bkCat = cat => bk.reduce((s,b)=>s+(norm(b.chiTiet)===norm(cat)&&(b.thu||0)>0?(b.thu):0),0);
+    const bkCat = cat => bk.reduce((s,b)=>s+(norm(b.chiTiet)===norm(cat)&&(b.thu||0)>0?b.thu:0),0);
     const tienThue = bkCat('Tiền thuê');
     const phiDV    = bkCat('Phí dịch vụ');
     const laiNH    = bkCat('Lãi NH');
     const tienCocT = bk.reduce((s,b)=>s+(norm(b.chiTiet)==='Tiền cọc'&&(b.thu||0)>0?b.thu:0),0);
     const tienCocC = bk.reduce((s,b)=>s+(norm(b.chiTiet)==='Tiền cọc'&&(b.chi||0)>0?b.chi:0),0);
-    const tienCoc = tienCocT - tienCocC;
+    const tienCoc  = tienCocT - tienCocC;
     const thuKhac  = bkCat('Khác Thu') + bkCat('Thu khác');
     const totalThu = bk.reduce((s,b)=>s+((b.thu||0)>0?b.thu:0),0);
     const doanhThu = tienThue + phiDV + laiNH;
-
     const chi = {};
     CHI_ROWS.forEach(k=>{ chi[k] = bk.reduce((s,b)=>s+(norm(b.chiTiet)===k?(b.chi||0):0),0); });
     const totalChi = Object.values(chi).reduce((s,v)=>s+v,0);
-
     const thuRefunds = bk.reduce((s,b)=>s+(thuCatsNorm.includes(norm(b.chiTiet))&&(b.chi||0)>0?b.chi:0),0);
     const totalThuNet = totalThu - thuRefunds;
-
     const cdt = bk.reduce((s,b)=>s+(norm(b.chiTiet)==='Chuyển CĐT'?(b.chi||0):0),0);
     const soDuDau = soDuBefore(`${yr}-${mn2}-01`);
     const soDuCuoi = soDuDau + totalThu - totalChi - thuRefunds - cdt;
-
     return {m, thangKey, tienThue, phiDV, laiNH, tienCoc, thuKhac, totalThu, totalThuNet, thuRefunds, doanhThu, chi, totalChi, cdt, soDuDau, soDuCuoi, loiNhuan: doanhThu-totalChi};
   });
 
-  // Totals helper
   const sum = fn => mData.reduce((s,d)=>s+fn(d),0);
-
-  // Summary cards
   const totalDT = sum(d=>d.doanhThu);
   const totalCP = sum(d=>d.totalChi);
   const totalLN = sum(d=>d.loiNhuan);
@@ -2089,7 +2159,6 @@ function renderKQKD() {
     <div class="stat-card red"><div class="lbl">Tổng chi phí</div><div class="val" style="color:#991b1b">${fmt(totalCP)}</div><div class="sub">Năm ${yr}</div></div>
     <div class="stat-card blue"><div class="lbl">Tổng lợi nhuận</div><div class="val" style="color:${lnColor}">${fmt(totalLN)}</div><div class="sub">Năm ${yr}</div></div>`;
 
-  // Cell formatter
   const f0 = v => v ? fmt(v) : '';
   const fmtNet = v => v === 0 ? '' : v > 0 ? f0(v) : `<span style="color:#2563eb;font-style:italic">${f0(v)}</span>`;
   const thStyle = 'text-align:right;padding:5px 7px;min-width:100px;font-size:11px;white-space:nowrap';
@@ -2098,10 +2167,6 @@ function renderKQKD() {
   const lbl = (txt,style='') => `<td style="padding:5px 12px;font-size:12px;position:sticky;left:0;background:#fff;z-index:10;border-bottom:1px solid #f3f4f6;border-right:2px solid #e5e7eb;white-space:nowrap;${style}">${txt}</td>`;
   const lblB = (txt,bg='#fff',style='') => `<td style="padding:6px 12px;font-size:12px;font-weight:700;position:sticky;left:0;background:${bg};z-index:10;border-bottom:1px solid #e5e7eb;border-right:2px solid #e5e7eb;white-space:nowrap;${style}">${txt}</td>`;
 
-  // Header row for months
-  const monthHeaders = months.map(m=>`<th style="${thStyle}">T${m}</th>`).join('');
-
-  // Build table
   let t = `<table style="width:100%;border-collapse:separate;border-spacing:0;font-size:12px">
   <thead><tr style="background:#14532d;color:#fff">
     <th style="text-align:left;padding:8px 12px;position:sticky;top:0;left:0;background:#14532d;z-index:30;min-width:180px">${cosoName}</th>
@@ -2109,88 +2174,39 @@ function renderKQKD() {
     <th style="${thStyle};background:#0f3d1f;position:sticky;top:0;z-index:20">Tổng</th>
   </tr></thead><tbody>`;
 
-  // ─── Số dư đầu kỳ ───
-  t += `<tr style="background:#f8fafc">
-    ${lblB('Số dư đầu kỳ','#f8fafc')}
-    ${mData.map(d=>tdB(fmt(d.soDuDau),'color:#111827')).join('')}
-    <td style="text-align:right;padding:5px 7px;font-size:11px;color:#9ca3af;border-bottom:1px solid #e5e7eb">—</td>
-  </tr>`;
+  t += `<tr style="background:#f8fafc">${lblB('Số dư đầu kỳ','#f8fafc')}${mData.map(d=>tdB(fmt(d.soDuDau),'color:#111827')).join('')}<td style="text-align:right;padding:5px 7px;font-size:11px;color:#9ca3af;border-bottom:1px solid #e5e7eb">—</td></tr>`;
+  t += `<tr style="background:#f0fdf4">${lblB('Tổng thu','#f0fdf4','color:#15803d')}${mData.map(d=>tdB(f0(d.totalThuNet),'color:#15803d')).join('')}${tdB(f0(sum(d=>d.totalThuNet)),'color:#15803d')}</tr>`;
+  t += `<tr style="background:#dcfce7">${lblB('Doanh thu','#dcfce7','color:#166534')}${mData.map(d=>tdB(f0(d.doanhThu),'color:#166534')).join('')}${tdB(f0(sum(d=>d.doanhThu)),'color:#166534')}</tr>`;
 
-  // ─── Tổng thu ───
-  t += `<tr style="background:#f0fdf4">
-    ${lblB('Tổng thu','#f0fdf4','color:#15803d')}
-    ${mData.map(d=>tdB(f0(d.totalThuNet),'color:#15803d')).join('')}
-    ${tdB(f0(sum(d=>d.totalThuNet)),'color:#15803d')}
-  </tr>`;
-
-  // ─── Doanh thu ───
-  t += `<tr style="background:#dcfce7">
-    ${lblB('Doanh thu','#dcfce7','color:#166534')}
-    ${mData.map(d=>tdB(f0(d.doanhThu),'color:#166534')).join('')}
-    ${tdB(f0(sum(d=>d.doanhThu)),'color:#166534')}
-  </tr>`;
-  const detailSubRow = (label, vals) => {
+  const detailRow = (label, vals) => {
     if (!vals.some(v=>v!==0)) return '';
     const tot = vals.reduce((s,v)=>s+v,0);
-    return `<tr>
-      <td style="padding:3px 12px 3px 26px;font-size:11px;color:#374151;position:sticky;left:0;background:#fff;z-index:1;border-bottom:1px solid #f3f4f6;white-space:nowrap">${label}</td>
-      ${vals.map(v=>td(fmtNet(v))).join('')}
-      ${td(fmtNet(tot),'font-weight:600')}
-    </tr>`;
+    return `<tr><td style="padding:3px 12px 3px 26px;font-size:11px;color:#374151;position:sticky;left:0;background:#fff;z-index:1;border-bottom:1px solid #f3f4f6;white-space:nowrap">${label}</td>${vals.map(v=>td(fmtNet(v))).join('')}${td(fmtNet(tot),'font-weight:600')}</tr>`;
   };
-  t += detailSubRow('Phí thuê',      mData.map(d=>d.tienThue||0));
-  t += detailSubRow('Phí dịch vụ',   mData.map(d=>d.phiDV||0));
-  t += detailSubRow('Lãi bank',      mData.map(d=>d.laiNH||0));
-  t += detailSubRow('Tiền cọc',      mData.map(d=>d.tienCoc||0));
-  t += detailSubRow('Thu khác',      mData.map(d=>d.thuKhac||0));
+  t += detailRow('Phí thuê',    mData.map(d=>d.tienThue||0));
+  t += detailRow('Phí dịch vụ', mData.map(d=>d.phiDV||0));
+  t += detailRow('Lãi bank',    mData.map(d=>d.laiNH||0));
+  t += detailRow('Tiền cọc',    mData.map(d=>d.tienCoc||0));
+  t += detailRow('Thu khác',    mData.map(d=>d.thuKhac||0));
 
-  // ─── Chi phí ───
-  t += `<tr style="background:#fee2e2">
-    ${lblB('Chi phí','#fee2e2','color:#991b1b')}
-    ${mData.map(d=>tdB(f0(d.totalChi),'color:#991b1b')).join('')}
-    ${tdB(f0(sum(d=>d.totalChi)),'color:#991b1b')}
-  </tr>`;
+  t += `<tr style="background:#fee2e2">${lblB('Chi phí','#fee2e2','color:#991b1b')}${mData.map(d=>tdB(f0(d.totalChi),'color:#991b1b')).join('')}${tdB(f0(sum(d=>d.totalChi)),'color:#991b1b')}</tr>`;
   CHI_ROWS.forEach(k=>{
     const vals = mData.map(d=>d.chi[k]||0);
     if (!vals.some(v=>v!==0)) return;
-    t += `<tr>
-      <td style="padding:3px 12px 3px 26px;font-size:11px;color:#374151;position:sticky;left:0;background:#fff;z-index:1;border-bottom:1px solid #f3f4f6;white-space:nowrap">${k}</td>
-      ${vals.map(v=>td(fmtNet(v))).join('')}
-      ${td(fmtNet(vals.reduce((s,v)=>s+v,0)),'font-weight:600')}
-    </tr>`;
+    t += `<tr><td style="padding:3px 12px 3px 26px;font-size:11px;color:#374151;position:sticky;left:0;background:#fff;z-index:1;border-bottom:1px solid #f3f4f6;white-space:nowrap">${k}</td>${vals.map(v=>td(fmtNet(v))).join('')}${td(fmtNet(vals.reduce((s,v)=>s+v,0)),'font-weight:600')}</tr>`;
   });
 
-  // ─── Lợi nhuận PBP ───
-  t += `<tr style="background:#dbeafe;border-top:2px solid #93c5fd">
-    ${lblB('Lợi nhuận PBP','#dbeafe','color:#1e40af')}
-    ${mData.map(d=>{
-      const ln=d.loiNhuan;
-      const c=ln>0?'color:#1e40af':ln<0?'color:#dc2626':'color:#374151';
-      return tdB(f0(ln),c);
-    }).join('')}
-    ${(()=>{const s=sum(d=>d.loiNhuan);return tdB(f0(s),s>=0?'color:#1e40af':'color:#dc2626');})()}
-  </tr>`;
+  t += `<tr style="background:#dbeafe">${lblB('Lợi nhuận PBP','#dbeafe','color:#1e40af')}${mData.map(d=>{const ln=d.loiNhuan;const c=ln>0?'color:#1e40af':ln<0?'color:#dc2626':'color:#374151';return tdB(f0(ln),c);}).join('')}${(()=>{const s=sum(d=>d.loiNhuan);return tdB(f0(s),s>=0?'color:#1e40af':'color:#dc2626');})()}</tr>`;
 
-  // ─── Chuyển tiền cho CĐT ───
   const cdtVals = mData.map(d=>d.cdt||0);
   if (cdtVals.some(v=>v>0)) {
-    t += `<tr>
-      ${lbl('Chuyển tiền cho CĐT')}
-      ${cdtVals.map(v=>td(fmtNet(v))).join('')}
-      ${td(fmtNet(cdtVals.reduce((s,v)=>s+v,0)),'font-weight:600')}
-    </tr>`;
+    t += `<tr>${lbl('Chuyển tiền cho CĐT')}${cdtVals.map(v=>td(fmtNet(v))).join('')}${td(fmtNet(cdtVals.reduce((s,v)=>s+v,0)),'font-weight:600')}</tr>`;
   }
 
-  // ─── Số dư cuối kỳ ───
-  t += `<tr style="background:#14532d">
-    <td style="padding:6px 12px;font-weight:700;color:#fff;position:sticky;left:0;background:#14532d;z-index:1;white-space:nowrap">Số dư cuối kỳ</td>
-    ${mData.map(d=>`<td style="text-align:right;padding:6px 7px;font-weight:700;color:#fff;font-size:12px">${fmt(d.soDuCuoi)}</td>`).join('')}
-    <td style="text-align:right;padding:6px 7px;color:#6ee7b7;font-size:11px">—</td>
-  </tr>`;
+  t += `<tr style="background:#14532d"><td style="padding:6px 12px;font-weight:700;color:#fff;position:sticky;left:0;background:#14532d;z-index:1;white-space:nowrap">Số dư cuối kỳ</td>${mData.map(d=>`<td style="text-align:right;padding:6px 7px;font-weight:700;color:#fff;font-size:12px">${fmt(d.soDuCuoi)}</td>`).join('')}<td style="text-align:right;padding:6px 7px;color:#6ee7b7;font-size:11px">—</td></tr>`;
 
   t += `</tbody></table>`;
   document.getElementById('kqkd-table-wrap').innerHTML = t;
-
 }
 
 // ===== HOP DONG + PHONG =====
