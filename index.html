@@ -2577,14 +2577,15 @@ function renderBaoTri() {
   if (elC) elC.textContent = data.length;
 
   const inp = 'border:none;outline:none;width:100%;font-size:12.5px;background:transparent;padding:3px 4px;';
+  const h = s => (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
   const rows = data.map(r=>`<tr id="bt-row-${r.id}">
-    <td style="padding:4px 8px"><input style="${inp}" value="${esc(r.maTs||'')}" placeholder="Mã TS" onblur="saveBaoTriField('${r.id}','maTs',this.value)"></td>
-    <td style="padding:4px 8px"><input style="${inp}" value="${esc(r.tenTs||'')}" placeholder="Tên tài sản" onblur="saveBaoTriField('${r.id}','tenTs',this.value)"></td>
-    <td style="padding:4px 8px"><input style="${inp}" value="${esc(r.vitri||'')}" placeholder="Vị trí" onblur="saveBaoTriField('${r.id}','vitri',this.value)"></td>
-    <td style="padding:4px 8px"><input style="${inp}min-width:180px" value="${esc(r.dienGiai||'')}" placeholder="Diễn giải" onblur="saveBaoTriField('${r.id}','dienGiai',this.value)"></td>
+    <td style="padding:4px 8px"><input style="${inp}" value="${h(r.maTs)}" placeholder="Mã TS" onblur="saveBaoTriField('${r.id}','maTs',this.value)"></td>
+    <td style="padding:4px 8px"><input style="${inp}" value="${h(r.tenTs)}" placeholder="Tên tài sản" onblur="saveBaoTriField('${r.id}','tenTs',this.value)"></td>
+    <td style="padding:4px 8px"><input style="${inp}" value="${h(r.vitri)}" placeholder="Vị trí" onblur="saveBaoTriField('${r.id}','vitri',this.value)"></td>
+    <td style="padding:4px 8px"><input style="${inp}min-width:180px" value="${h(r.dienGiai)}" placeholder="Diễn giải" onblur="saveBaoTriField('${r.id}','dienGiai',this.value)"></td>
     <td style="padding:4px 8px"><input type="date" style="${inp}" value="${r.ngay||''}" onblur="saveBaoTriField('${r.id}','ngay',this.value)"></td>
     <td style="padding:4px 8px"><input type="number" style="${inp}text-align:right" value="${r.chiPhi||''}" placeholder="0" onblur="saveBaoTriField('${r.id}','chiPhi',Number(this.value))"></td>
-    <td style="padding:4px 6px;text-align:center">${['owner','manager'].includes(currentRole)?`<button class="btn btn-danger btn-sm" onclick="deleteBaoTriRow('${r.id}')" title="Xoá">🗑</button>`:''}</td>
+    <td style="padding:4px 6px;text-align:center">${canEdit?`<button class="btn btn-danger btn-sm" onclick="deleteBaoTriRow('${r.id}')" title="Xoá">🗑</button>`:''}</td>
   </tr>`).join('');
 
   if (table) table.innerHTML = rows || `<tr><td colspan="7"><div class="empty"><div class="icon">🔧</div><p>Chưa có dữ liệu bảo trì</p></div></td></tr>`;
