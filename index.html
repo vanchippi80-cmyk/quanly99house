@@ -2224,6 +2224,19 @@ function renderKQKD() {
 }
 
 // ===== HOP DONG + PHONG =====
+// Tìm hợp đồng hiện tại của mỗi phòng (mới nhất theo batdau)
+function getCurrentContractMap() {
+  const map = new Map();
+  cache.phong.filter(p => p.ten || p.soHopDong).forEach(p => {
+    const prev = map.get(p.so);
+    if (!prev) { map.set(p.so, p); return; }
+    const pDate = p.batdau || p.ngayHopDong || '';
+    const prevDate = prev.batdau || prev.ngayHopDong || '';
+    if (pDate > prevDate) map.set(p.so, p);
+    else if (pDate === prevDate && daysUntil(p.ketthuc) >= 0 && daysUntil(prev.ketthuc) < 0) map.set(p.so, p);
+  });
+  return map;
+}
 function hdStatus(p) {
   const days = daysUntil(p.ketthuc);
   if(!p.ketthuc) return '<span class="badge bg">Hiệu lực</span>';
@@ -2240,14 +2253,15 @@ function renderHopDong() {
     const btn2=document.getElementById('btn-ql-phong'); if(btn2) btn2.style.display='';
   }
 
-  // Stat cards
-  const allHD = cache.phong.filter(p => p.ten || p.soHopDong);
-  const hieuluc = allHD.filter(p => { const d=daysUntil(p.ketthuc); return !p.ketthuc||d>=0; });
-  const hethan  = allHD.filter(p => p.ketthuc && daysUntil(p.ketthuc)<0);
+  // Stat cards — đếm theo phòng (hợp đồng hiện tại mỗi phòng)
+  const currentMap = getCurrentContractMap();
+  const currentList = [...currentMap.values()];
+  const hieuluc = currentList.filter(p => { const d=daysUntil(p.ketthuc); return !p.ketthuc||d>=0; });
+  const hethan  = currentList.filter(p => p.ketthuc && daysUntil(p.ketthuc)<0);
   const elTotal = document.getElementById('hd-total');
   const elHL    = document.getElementById('hd-hieuluc');
   const elHT    = document.getElementById('hd-hethan');
-  if(elTotal) elTotal.textContent = allHD.length;
+  if(elTotal) elTotal.textContent = currentList.length;
   if(elHL) elHL.textContent = hieuluc.length;
   if(elHT) elHT.textContent = hethan.length;
 
@@ -2266,23 +2280,31 @@ function renderHopDong() {
   let rows = '';
   sorted.forEach(p => {
     const phuLucs = p.phuLuc || [];
-    const statusCell = p.ten ? hdStatus(p) : '<span class="badge bgr">Trống</span>';
-    const bg = 'background:#fff';
-    rows += `<tr>
-      <td style="position:sticky;left:0;z-index:10;${bg};min-width:70px"><b>${p.so}</b></td>
-      <td style="position:sticky;left:70px;z-index:10;${bg};min-width:110px">${p.soHopDong||''}</td>
-      <td style="position:sticky;left:180px;z-index:10;${bg};min-width:130px;color:#1d4ed8;font-weight:500">${p.noiDung||'Hợp đồng thuê'}</td>
-      <td>${fmtNgay(p.ngayHopDong||p.batdau)}</td>
-      <td>${p.ten||'—'}</td>
-      <td>${p.sdt||''}</td>
-      <td style="text-align:center">${p.slKhach||''}</td>
-      <td>${p.kyHan||''}</td>
-      <td style="text-align:right">${p.gia?fmt(p.gia):''}</td>
-      <td style="text-align:right">${p.coc?fmt(p.coc):''}</td>
-      <td style="text-align:right">${p.giaDien?fmt(p.giaDien):''}</td>
-      <td style="text-align:right">${p.giaNuoc?fmt(p.giaNuoc):''}</td>
+    const isCurrent = currentMap.get(p.so)?.id === p.id;
+    const isHistorical = !isCurrent;
+    const bg = isHistorical ? 'background:#f8fafc' : 'background:#fff';
+    const dimText = isHistorical ? 'color:#9ca3af' : '';
+    const statusCell = isHistorical
+      ? '<span class="badge bgr" style="background:#e5e7eb;color:#6b7280">Lịch sử</span>'
+      : (p.ten ? hdStatus(p) : '<span class="badge bgr">Trống</span>');
+    const noiDung = isHistorical
+      ? `<span style="color:#9ca3af;font-size:11px">${p.noiDung||'Hợp đồng thuê'}</span>`
+      : `<span style="color:#1d4ed8;font-weight:500">${p.noiDung||'Hợp đồng thuê'}</span>`;
+    rows += `<tr style="${bg}${isHistorical?';opacity:0.75':''}">
+      <td style="position:sticky;left:0;z-index:10;${bg};min-width:70px;${dimText}"><b>${p.so}</b></td>
+      <td style="position:sticky;left:70px;z-index:10;${bg};min-width:110px;${dimText}">${p.soHopDong||''}</td>
+      <td style="position:sticky;left:180px;z-index:10;${bg};min-width:130px">${noiDung}</td>
+      <td style="${dimText}">${fmtNgay(p.ngayHopDong||p.batdau)}</td>
+      <td style="${dimText}">${p.ten||'—'}</td>
+      <td style="${dimText}">${p.sdt||''}</td>
+      <td style="text-align:center;${dimText}">${p.slKhach||''}</td>
+      <td style="${dimText}">${p.kyHan||''}</td>
+      <td style="text-align:right;${dimText}">${p.gia?fmt(p.gia):''}</td>
+      <td style="text-align:right;${dimText}">${p.coc?fmt(p.coc):''}</td>
+      <td style="text-align:right;${dimText}">${p.giaDien?fmt(p.giaDien):''}</td>
+      <td style="text-align:right;${dimText}">${p.giaNuoc?fmt(p.giaNuoc):''}</td>
       <td>${statusCell}</td>
-      <td style="font-size:11px;color:#6b7280">${p.ghiChu||''}</td>
+      <td style="font-size:11px;color:#9ca3af">${p.ghiChu||''}</td>
       <td>${canEdit?`<button class="btn btn-secondary btn-sm" onclick="editPhong('${p.id}')" title="Sửa">✏️</button>`:''}</td>
     </tr>`;
     // Phụ lục rows
@@ -2322,17 +2344,11 @@ function renderHopDong() {
 
 // ===== KHACH IN/OUT =====
 function renderKhachInOut() {
-  // Lấy danh sách phòng có khách (deduplicate: mỗi phòng lấy HĐ hiệu lực hoặc mới nhất)
-  const phongMap = new Map();
-  cache.phong.filter(p=>p.ten).forEach(p=>{
-    const prev = phongMap.get(p.so);
-    if(!prev) { phongMap.set(p.so, p); return; }
-    const dPrev = daysUntil(prev.ketthuc);
-    const dCur = daysUntil(p.ketthuc);
-    // ưu tiên HĐ còn hiệu lực, rồi đến HĐ mới nhất
-    if((dCur>=0 && dPrev<0) || (p.batdau||'')>(prev.batdau||'')) phongMap.set(p.so, p);
-  });
-  const occupied = [...phongMap.values()].sort((a,b)=>(a.so||'').localeCompare(b.so||''));
+  // Dùng getCurrentContractMap: mỗi phòng chỉ lấy HĐ mới nhất (theo batdau)
+  const curMap = getCurrentContractMap();
+  const occupied = [...curMap.values()]
+    .filter(p=>p.ten)
+    .sort((a,b)=>(a.so||'').localeCompare(b.so||''));
 
   const hieuluc = occupied.filter(p=>!p.ketthuc||daysUntil(p.ketthuc)>=0);
   const sap = occupied.filter(p=>p.ketthuc&&daysUntil(p.ketthuc)>=0&&daysUntil(p.ketthuc)<15);
