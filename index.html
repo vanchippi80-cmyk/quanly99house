@@ -2297,7 +2297,7 @@ function renderKQKD() {
 // Tìm hợp đồng hiện tại của mỗi phòng (mới nhất theo batdau)
 function getCurrentContractMap() {
   const map = new Map();
-  cache.phong.filter(p => p.ten || p.soHopDong).forEach(p => {
+  cache.phong.filter(p => p.so).forEach(p => {
     const prev = map.get(p.so);
     if (!prev) { map.set(p.so, p); return; }
     const pDate = p.batdau || p.ngayHopDong || '';
@@ -2340,7 +2340,7 @@ function renderHopDong() {
 
   // Hiện tất cả hợp đồng, sắp xếp theo phòng rồi ngày
   const sorted = [...cache.phong]
-    .filter(p => (p.ten || p.soHopDong || (p.phuLuc && p.phuLuc.length))
+    .filter(p => p.so
       && (!filterPhong || (p.so||'').toLowerCase().normalize('NFC').includes(filterPhong)))
     .sort((a,b) => {
       const so = (a.so||'').localeCompare(b.so||'');
