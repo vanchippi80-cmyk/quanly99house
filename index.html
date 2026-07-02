@@ -2401,15 +2401,6 @@ function renderHopDong() {
   });
   document.getElementById('hd-table').innerHTML = rows || `<tr><td colspan="15"><div class="empty"><div class="icon">📋</div><p>Chưa có hợp đồng</p></div></td></tr>`;
 
-  document.getElementById('phong-th-action').textContent = canEdit?'Xử lý':'';
-  const phongRows = sorted.map(p=>{
-    const badge = p.tt==='Đang thuê'?'<span class="badge bg">Đang thuê</span>':'<span class="badge bgr">Trống</span>';
-    return `<tr><td><b>${p.so}</b></td><td>${p.tang||''}</td><td>${p.dt||''}${p.dt?'m²':''}</td>
-      <td>${p.loai||''}</td><td>${fmt(p.gia)}</td><td>${badge}</td>
-      <td>${p.ten||'—'}</td>
-      <td>${canEdit?`<button class="btn btn-secondary btn-sm" onclick="editPhong('${p.id}')">✏️</button>`:''}</td></tr>`;
-  }).join('');
-  document.getElementById('phong-table').innerHTML = phongRows || `<tr><td colspan="8"><div class="empty"><div class="icon">🚪</div><p>Chưa có phòng nào</p></div></td></tr>`;
 }
 
 // ===== KHACH IN/OUT =====
@@ -2938,33 +2929,38 @@ async function saveThu() {
 
 async function savePhong() {
   const editId = document.getElementById('modal-phong').dataset.editId;
-  // Khi thêm hợp đồng: tìm phòng đã có trong danh mục theo số phòng được chọn
   const selectedSo = document.getElementById('p-so').value;
   if (!selectedSo) { toast('Chọn phòng','error'); return; }
-  const existingPhong = cache.phong.find(p => p.so === selectedSo);
-  const docId = editId || existingPhong?.id;
-  if (!docId) { toast('Phòng không tồn tại trong danh mục','error'); return; }
 
   const contractData = {
-    ten:document.getElementById('p-ten').value,
-    sdt:document.getElementById('p-sdt').value,
-    batdau:document.getElementById('p-batdau').value,
-    ketthuc:document.getElementById('p-ketthuc').value,
-    coc:Number(document.getElementById('p-coc').value)||0,
-    gia:Number(document.getElementById('p-gia').value)||0,
-    tt:document.getElementById('p-tt').value,
-    soHopDong:document.getElementById('p-soHopDong').value,
-    noiDung:document.getElementById('p-noiDung').value,
-    ngayHopDong:document.getElementById('p-ngayHopDong').value,
-    slKhach:Number(document.getElementById('p-slKhach').value)||0,
-    kyHan:document.getElementById('p-kyHan').value,
-    giaDien:Number(document.getElementById('p-giaDien').value)||0,
-    giaNuoc:Number(document.getElementById('p-giaNuoc').value)||0,
-    ghiChu:document.getElementById('p-ghiChu').value,
-    updatedAt:FieldValue.serverTimestamp()
+    so: selectedSo,
+    ten:         document.getElementById('p-ten').value,
+    sdt:         document.getElementById('p-sdt').value,
+    batdau:      document.getElementById('p-batdau').value,
+    ketthuc:     document.getElementById('p-ketthuc').value,
+    coc:         Number(document.getElementById('p-coc').value)||0,
+    gia:         Number(document.getElementById('p-gia').value)||0,
+    tt:          document.getElementById('p-tt').value,
+    soHopDong:   document.getElementById('p-soHopDong').value,
+    noiDung:     document.getElementById('p-noiDung').value,
+    ngayHopDong: document.getElementById('p-ngayHopDong').value,
+    slKhach:     Number(document.getElementById('p-slKhach').value)||0,
+    kyHan:       document.getElementById('p-kyHan').value,
+    giaDien:     Number(document.getElementById('p-giaDien').value)||0,
+    giaNuoc:     Number(document.getElementById('p-giaNuoc').value)||0,
+    ghiChu:      document.getElementById('p-ghiChu').value,
   };
-  await db.collection('phong').doc(docId).update(contractData);
-  toast('Đã lưu hợp đồng','success');
+
+  if (editId) {
+    // Sửa: update đúng document
+    await db.collection('phong').doc(editId).update({...contractData, updatedAt: FieldValue.serverTimestamp()});
+    toast('Đã cập nhật hợp đồng','success');
+  } else {
+    // Thêm mới: ADD document mới, không đè lên hợp đồng cũ
+    await db.collection('phong').add({...contractData, cosoId: selectedCosoId, createdAt: FieldValue.serverTimestamp()});
+    toast('Đã thêm hợp đồng mới','success');
+  }
+
   delete document.getElementById('modal-phong').dataset.editId;
   closeModal('modal-phong');
 }
