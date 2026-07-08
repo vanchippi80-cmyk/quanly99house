@@ -2375,7 +2375,7 @@ function renderHopDong() {
       <td style="text-align:right;${dimText}">${p.giaNuoc?fmt(p.giaNuoc):''}</td>
       <td>${statusCell}</td>
       <td style="font-size:11px;color:#9ca3af">${p.ghiChu||''}</td>
-      <td>${canEdit?`<button class="btn btn-secondary btn-sm" onclick="editPhong('${p.id}')" title="Sửa">✏️</button>`:''}</td>
+      <td style="white-space:nowrap">${canEdit?`<button class="btn btn-secondary btn-sm" onclick="editPhong('${p.id}')" title="Sửa">✏️</button> <button class="btn btn-danger btn-sm" onclick="deletePhong('${p.id}')" title="Xóa hợp đồng">🗑️</button>`:''}</td>
     </tr>`;
     // Phụ lục rows
     phuLucs.forEach((pl, idx) => {
@@ -3237,6 +3237,18 @@ async function deleteQlPhong(id, so) {
   if(!confirm(`Xóa bản trùng phòng ${so}?`)) return;
   await db.collection('phong').doc(id).delete();
   toast(`Đã xóa bản trùng ${so}`,'success');
+}
+async function deletePhong(id) {
+  const p = cache.phong.find(x=>x.id===id);
+  if(!p) return;
+  const label = [p.soHopDong, p.so, p.ten].filter(Boolean).join(' – ');
+  if(!confirm(`Xóa hợp đồng: ${label}?\n\nThao tác này không thể hoàn tác.`)) return;
+  try {
+    await db.collection('phong').doc(id).delete();
+    toast('Đã xóa hợp đồng','success');
+  } catch(e) {
+    toast('Lỗi xóa: '+e.message,'error');
+  }
 }
 function editQlPhong(id) {
   const p=cache.phong.find(x=>x.id===id); if(!p) return;
