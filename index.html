@@ -770,7 +770,9 @@ tr:hover td{background:#fafafa}
     </div>
     <div class="modal-body">
       <input type="hidden" id="bt-edit-id">
-      <div class="form-group"><label>Mã tài sản</label><input id="bt-edit-maTs" class="form-control" placeholder="VD: TS001"></div>
+      <div class="form-group"><label>Mã tài sản</label><input id="bt-edit-maTs" class="form-control" placeholder="VD: TS001" oninput="onBtMaTsInput(this.value)" list="bt-maTs-list">
+        <datalist id="bt-maTs-list"></datalist>
+      </div>
       <div class="form-group"><label>Tên tài sản</label><input id="bt-edit-tenTs" class="form-control" placeholder="VD: Điều hòa"></div>
       <div class="form-group"><label>Vị trí</label><input id="bt-edit-vitri" class="form-control" placeholder="VD: P101"></div>
       <div class="form-group"><label>Diễn giải</label><input id="bt-edit-dienGiai" class="form-control" placeholder="VD: Vệ sinh định kỳ"></div>
@@ -2638,6 +2640,21 @@ async function addBaoTriRow() {
   }
 }
 
+function onBtMaTsInput(val) {
+  // Populate datalist
+  const dl = document.getElementById('bt-maTs-list');
+  if(dl) dl.innerHTML = (cache.taisan||[])
+    .filter(ts=>(ts.ma||'').toLowerCase().includes(val.toLowerCase()))
+    .map(ts=>`<option value="${ts.ma}">${ts.ma} – ${ts.ten||''} (${ts.phongSo||''})</option>`).join('');
+  // Auto-fill if exact match
+  const ts = (cache.taisan||[]).find(t=>(t.ma||'').toLowerCase()===val.toLowerCase());
+  if(ts) {
+    const tenEl = document.getElementById('bt-edit-tenTs');
+    const vitriEl = document.getElementById('bt-edit-vitri');
+    if(tenEl && !tenEl.value) tenEl.value = ts.ten||'';
+    if(vitriEl && !vitriEl.value) vitriEl.value = ts.phongSo||'';
+  }
+}
 function editBaoTriRow(id) {
   const r = (cache.baotri||[]).find(x=>x.id===id); if(!r) return;
   document.getElementById('bt-edit-id').value = id;
@@ -3073,6 +3090,10 @@ function openModal(id) {
     document.getElementById('p-tt').value='Đang thuê';
     document.getElementById('p-noiDung').value='Hợp đồng thuê';
     document.querySelector('#modal-phong .modal-header h3').textContent='📋 Thêm hợp đồng';
+  }
+  if (id==='modal-baotri') {
+    const dl = document.getElementById('bt-maTs-list');
+    if(dl) dl.innerHTML = (cache.taisan||[]).map(ts=>`<option value="${ts.ma}">${ts.ma} – ${ts.ten||''} (${ts.phongSo||''})</option>`).join('');
   }
   if (id==='modal-ql-phong') { renderQlPhong(); document.getElementById('ql-phong-add-row').style.display='none'; }
   if (id==='modal-inout') {
