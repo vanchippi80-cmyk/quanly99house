@@ -2622,69 +2622,103 @@ function renderBaoTri() {
 
 }
 
-async function addBaoTriRow() {
-  if (!selectedCosoId) { toast('Chưa chọn cơ sở','error'); return; }
-  try {
-    const ref = await db.collection('baotri').add({
-      cosoId: selectedCosoId,
-      maTs:'', tenTs:'', vitri:'', dienGiai:'', ngay:'', chiPhi:0,
-      createdAt: FieldValue.serverTimestamp()
-    });
-    setTimeout(()=>{
-      const row = document.getElementById('bt-row-'+ref.id);
-      if (row) row.querySelector('input')?.focus();
-    }, 500);
-  } catch(e) {
-    toast('Lỗi thêm dòng: '+e.message,'error');
-    console.error('addBaoTriRow',e);
-  }
-}
-
-function onBtMaTsInput(val) {
-  // Populate datalist
-  const dl = document.getElementById('bt-maTs-list');
-  if(dl) dl.innerHTML = (cache.taisan||[])
-    .filter(ts=>(ts.ma||'').toLowerCase().includes(val.toLowerCase()))
-    .map(ts=>`<option value="${ts.ma}">${ts.ma} – ${ts.ten||''} (${ts.phongSo||''})</option>`).join('');
-  // Auto-fill if exact match
-  const ts = (cache.taisan||[]).find(t=>(t.ma||'').toLowerCase()===val.toLowerCase());
+function btInpStyle() { return 'width:100%;padding:3px 5px;border:1px solid #d1d5db;border-radius:4px;font-size:11px'; }
+function btLookupTs(maVal, prefixId) {
+  const ts = (cache.taisan||[]).find(t=>(t.ma||'').toLowerCase()===maVal.toLowerCase());
   if(ts) {
-    const tenEl = document.getElementById('bt-edit-tenTs');
-    const vitriEl = document.getElementById('bt-edit-vitri');
+    const tenEl = document.getElementById(prefixId+'-tenTs');
+    const vitriEl = document.getElementById(prefixId+'-vitri');
     if(tenEl && !tenEl.value) tenEl.value = ts.ten||'';
     if(vitriEl && !vitriEl.value) vitriEl.value = ts.phongSo||'';
   }
 }
+function btDatalistHtml(id) {
+  const opts = (cache.taisan||[]).map(ts=>`<option value="${ts.ma}">${ts.ma} – ${ts.ten||''} (${ts.phongSo||''})</option>`).join('');
+  return `<datalist id="${id}">${opts}</datalist>`;
+}
+
+function addBaoTriRow() {
+  if (!selectedCosoId) { toast('Chưa chọn cơ sở','error'); return; }
+  // Remove existing add-row if any
+  document.getElementById('bt-add-row')?.remove();
+  const today = new Date().toISOString().split('T')[0];
+  const s = btInpStyle();
+  const tr = document.createElement('tr');
+  tr.id = 'bt-add-row';
+  tr.style.background = '#f0fdf4';
+  tr.innerHTML = `
+    <td><input id="bta-maTs" list="bta-dl" type="text" placeholder="Mã TS" style="${s}" oninput="btLookupTs(this.value,'bta')">${btDatalistHtml('bta-dl')}</td>
+    <td><input id="bta-tenTs" type="text" placeholder="Tên tài sản" style="${s}"></td>
+    <td><input id="bta-vitri" type="text" placeholder="Vị trí" style="${s}"></td>
+    <td><input id="bta-dienGiai" type="text" placeholder="Diễn giải" style="${s}"></td>
+    <td><input id="bta-ngay" type="date" value="${today}" style="${s}"></td>
+    <td><input id="bta-chiPhi" type="number" placeholder="0" style="${s};text-align:right"></td>
+    <td style="white-space:nowrap;text-align:center">
+      <button class="btn btn-primary btn-sm" onclick="saveBaoTriNewRow()" title="Lưu">💾</button>
+      <button class="btn btn-secondary btn-sm" onclick="document.getElementById('bt-add-row').remove()" title="Hủy">✕</button>
+    </td>`;
+  const table = document.getElementById('baotri-table');
+  // If table has empty-state row, clear it first
+  if(table.querySelector('.empty')) table.innerHTML = '';
+  table.insertBefore(tr, table.firstChild);
+  document.getElementById('bta-maTs').focus();
+}
+
+async function saveBaoTriNewRow() {
+  const data = {
+    cosoId:   selectedCosoId,
+    maTs:     document.getElementById('bta-maTs').value.trim(),
+    tenTs:    document.getElementById('bta-tenTs').value.trim(),
+    vitri:    document.getElementById('bta-vitri').value.trim(),
+    dienGiai: document.getElementById('bta-dienGiai').value.trim(),
+    ngay:     document.getElementById('bta-ngay').value,
+    chiPhi:   Number(document.getElementById('bta-chiPhi').value)||0,
+    createdAt: FieldValue.serverTimestamp(),
+  };
+  try {
+    await db.collection('baotri').add(data);
+    document.getElementById('bt-add-row')?.remove();
+    toast('Đã thêm','success');
+  } catch(e) { toast('Lỗi lưu: '+e.message,'error'); }
+}
+
 function editBaoTriRow(id) {
   const r = (cache.baotri||[]).find(x=>x.id===id); if(!r) return;
-  document.getElementById('bt-edit-id').value = id;
-  document.getElementById('bt-edit-maTs').value = r.maTs||'';
-  document.getElementById('bt-edit-tenTs').value = r.tenTs||'';
-  document.getElementById('bt-edit-vitri').value = r.vitri||'';
-  document.getElementById('bt-edit-dienGiai').value = r.dienGiai||'';
-  document.getElementById('bt-edit-ngay').value = r.ngay||'';
-  document.getElementById('bt-edit-chiPhi').value = r.chiPhi||'';
-  openModal('modal-baotri');
+  const row = document.getElementById('bt-row-'+id); if(!row) return;
+  const s = btInpStyle();
+  const esc = v => String(v||'').replace(/"/g,'&quot;');
+  row.style.background = '#fffbeb';
+  row.innerHTML = `
+    <td><input id="bte-maTs" list="bte-dl" type="text" value="${esc(r.maTs)}" style="${s}" oninput="btLookupTs(this.value,'bte')">${btDatalistHtml('bte-dl')}</td>
+    <td><input id="bte-tenTs" type="text" value="${esc(r.tenTs)}" style="${s}"></td>
+    <td><input id="bte-vitri" type="text" value="${esc(r.vitri)}" style="${s}"></td>
+    <td><input id="bte-dienGiai" type="text" value="${esc(r.dienGiai)}" style="${s}"></td>
+    <td><input id="bte-ngay" type="date" value="${esc(r.ngay)}" style="${s}"></td>
+    <td><input id="bte-chiPhi" type="number" value="${r.chiPhi||0}" style="${s};text-align:right"></td>
+    <td style="white-space:nowrap;text-align:center">
+      <button class="btn btn-primary btn-sm" onclick="saveBaoTriInlineEdit('${id}')" title="Lưu">💾</button>
+      <button class="btn btn-secondary btn-sm" onclick="renderBaoTri()" title="Hủy">✕</button>
+    </td>`;
 }
-async function saveBaoTriEdit() {
-  const id = document.getElementById('bt-edit-id').value; if(!id) return;
+
+async function saveBaoTriInlineEdit(id) {
   const data = {
-    maTs:    document.getElementById('bt-edit-maTs').value.trim(),
-    tenTs:   document.getElementById('bt-edit-tenTs').value.trim(),
-    vitri:   document.getElementById('bt-edit-vitri').value.trim(),
-    dienGiai:document.getElementById('bt-edit-dienGiai').value.trim(),
-    ngay:    document.getElementById('bt-edit-ngay').value,
-    chiPhi:  Number(document.getElementById('bt-edit-chiPhi').value)||0,
+    maTs:     document.getElementById('bte-maTs').value.trim(),
+    tenTs:    document.getElementById('bte-tenTs').value.trim(),
+    vitri:    document.getElementById('bte-vitri').value.trim(),
+    dienGiai: document.getElementById('bte-dienGiai').value.trim(),
+    ngay:     document.getElementById('bte-ngay').value,
+    chiPhi:   Number(document.getElementById('bte-chiPhi').value)||0,
   };
   try {
     await db.collection('baotri').doc(id).update(data);
-    closeModal('modal-baotri');
     toast('Đã lưu','success');
   } catch(e) { toast('Lỗi lưu: '+e.message,'error'); }
 }
+
 async function saveBaoTriField(id, field, value) {
   try { await db.collection('baotri').doc(id).update({[field]:value}); }
-  catch(e) { toast('Lỗi lưu: '+e.message,'error'); console.error('saveBaoTriField',e); }
+  catch(e) { toast('Lỗi lưu: '+e.message,'error'); }
 }
 
 async function deleteBaoTriRow(id) {
