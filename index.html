@@ -1800,7 +1800,9 @@ function renderThu() {
       ${td(t.soHopDong||'')}
       ${td(t.kh||t.ten||'')}
       ${td(t.dienGiai||'','text-align:left')}
-      ${td(t.tienCoc?fmt(t.tienCoc):'')}
+      ${t.tienCoc ? (t.tienCoc < 0
+        ? `<td style="text-align:right;padding:5px 8px;border-bottom:1px solid #f3f4f6;color:#dc2626;font-style:italic" title="Hoàn cọc">${fmt(t.tienCoc)}</td>`
+        : td(fmt(t.tienCoc))) : td('')}
       ${td(t.tienThue?fmt(t.tienThue):t.sotien?fmt(t.sotien):'')}
       ${td(t.dienCu||'')}
       ${td(t.dienMoi||'')}
@@ -1867,7 +1869,7 @@ function editThuRow(id) {
     <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6">
       <input id="tre-dienGiai" type="text" value="${(t.dienGiai||'').replace(/"/g,'&quot;')}" style="width:100%;padding:3px 5px;border:1px solid #d1d5db;border-radius:4px;font-size:11px">
     </td>
-    <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6">${inp('tienCoc','number',t.tienCoc||0)}</td>
+    <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6"><input id="tre-tienCoc" type="number" value="${t.tienCoc||0}" style="width:100%;padding:3px 5px;border:1px solid #d1d5db;border-radius:4px;font-size:11px" oninput="calcThuEditRow();if(Number(this.value)<0&&!document.getElementById('tre-dienGiai').value)document.getElementById('tre-dienGiai').value='Hoàn cọc'"></td>
     <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6">${inp('tienThue','number',t.tienThue||t.sotien||0)}</td>
     <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6">${inp('dienCu','number',t.dienCu||0)}</td>
     <td style="padding:4px 6px;border-bottom:1px solid #f3f4f6">${inp('dienMoi','number',t.dienMoi||0)}</td>
@@ -1997,7 +1999,7 @@ function addThuRow() {
     <td style="padding:4px 6px"><input id="tri-soHopDong" type="text" placeholder="" onchange="onThuRowHDChange()" style="width:100%;padding:3px 5px;border:1px solid #d1d5db;border-radius:4px;font-size:11px"></td>
     <td style="padding:4px 6px"><input id="tri-kh" type="text" placeholder="" style="width:100%;padding:3px 5px;border:1px solid #d1d5db;border-radius:4px;font-size:11px"></td>
     <td style="padding:4px 6px"><input id="tri-dienGiai" type="text" placeholder="" style="width:100%;padding:3px 5px;border:1px solid #d1d5db;border-radius:4px;font-size:11px"></td>
-    <td style="padding:4px 6px">${inp('tienCoc','number','0')}</td>
+    <td style="padding:4px 6px"><input id="tri-tienCoc" type="number" value="0" oninput="calcThuRow();if(Number(this.value)<0&&!document.getElementById('tri-dienGiai').value)document.getElementById('tri-dienGiai').value='Hoàn cọc'" style="width:100%;padding:3px 5px;border:1px solid #d1d5db;border-radius:4px;font-size:11px"></td>
     <td style="padding:4px 6px">${inp('tienThue','number','0')}</td>
     <td style="padding:4px 6px">${inp('dienCu','number','0')}</td>
     <td style="padding:4px 6px">${inp('dienMoi','number','0')}</td>
