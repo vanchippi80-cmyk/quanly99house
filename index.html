@@ -3111,19 +3111,11 @@ function editCoso(id) {
 function populatePhongDropdown(selectedId) {
   const sel = document.getElementById('p-so');
   if(!sel) return;
-  const isEdit = !!selectedId;
-  if(isEdit) {
-    // Khi sửa: hiện tất cả phòng (bao gồm phòng của HĐ đang sửa)
-    sel.innerHTML = '<option value="">-- Chọn phòng --</option>' +
-      cache.phong.map(p=>`<option value="${p.so}" data-id="${p.id}" ${p.id===selectedId?'selected':''}>${p.so}${p.ten?' - '+p.ten:''}</option>`).join('');
-  } else {
-    // Khi tạo mới: chỉ hiện số phòng (không kèm tên khách), deduplicate
-    const curMap = getCurrentContractMap();
-    const rooms = [...new Map(cache.phong.map(p=>[p.so,p])).values()]
-      .sort((a,b)=>(a.so||'').localeCompare(b.so||''));
-    sel.innerHTML = '<option value="">-- Chọn phòng --</option>' +
-      rooms.map(p=>`<option value="${p.so}" data-so="${p.so}">${p.so}</option>`).join('');
-  }
+  // Cả sửa và thêm mới: chỉ hiện số phòng, deduplicate
+  const rooms = [...new Map(cache.phong.map(p=>[p.so,p])).values()]
+    .sort((a,b)=>(a.so||'').localeCompare(b.so||''));
+  sel.innerHTML = '<option value="">-- Chọn phòng --</option>' +
+    rooms.map(p=>`<option value="${p.so}">${p.so}</option>`).join('');
 }
 function onPhongDropdownChange() {
   const sel = document.getElementById('p-so');
