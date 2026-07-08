@@ -2357,7 +2357,9 @@ function renderHopDong() {
     const bg = isHistorical ? 'background:#f8fafc' : 'background:#fff';
     const dimText = isHistorical ? 'color:#9ca3af' : '';
     const statusCell = isHistorical
-      ? '<span class="badge bgr" style="background:#e5e7eb;color:#6b7280">Lịch sử</span>'
+      ? (p.ketthuc && daysUntil(p.ketthuc) < 0
+          ? '<span class="badge br">Hết hạn</span>'
+          : '<span class="badge bgr" style="background:#e5e7eb;color:#6b7280">Lịch sử</span>')
       : (p.ten ? hdStatus(p) : '<span class="badge bgr">Trống</span>');
     const noiDung = isHistorical
       ? `<span style="color:#9ca3af;font-size:11px">${p.noiDung||'Hợp đồng thuê'}</span>`
