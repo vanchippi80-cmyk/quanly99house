@@ -568,7 +568,7 @@ tr:hover td{background:#fafafa}
             <option>Tiền cọc</option><option>Lãi NH</option>
           </optgroup>
           <optgroup label="— CHI —">
-            <option>Chuyển CĐT</option><option>Dọn dẹp</option><option>Hoa hồng</option>
+            <option>Chuyển CĐT</option><option>Dự phòng</option><option>Dọn dẹp</option><option>Hoa hồng</option>
             <option>Điện</option><option>Nước</option><option>Internet</option>
             <option>Sửa chữa</option><option>Bể bơi</option><option>Thuế</option><option>Rác</option><option>Khác</option>
           </optgroup>
@@ -909,7 +909,7 @@ let currentTab = 'no-coso';
 // THU categories = money coming in to bank
 const CAT_THU = ['Tiền thuê','Phí dịch vụ','Tiền cọc','Lãi NH'];
 // CHI categories = money going out
-const CAT_CHI = ['Chuyển CĐT','Dọn dẹp','Hoa hồng','Điện','Nước','Internet','Sửa chữa','Bể bơi','Thuế','Rác','Khác'];
+const CAT_CHI = ['Chuyển CĐT','Dự phòng','Dọn dẹp','Hoa hồng','Điện','Nước','Internet','Sửa chữa','Bể bơi','Thuế','Rác','Khác'];
 // For KQKD: doanh thu excludes Tiền cọc and Chuyển CĐT
 const CAT_DOANHTHU = ['Tiền thuê','Phí dịch vụ','Lãi NH'];
 // For KQKD: chi phí excludes Hoa hồng and Chuyển CĐT
@@ -1424,7 +1424,7 @@ async function deleteBankEntry(id) {
 
 // ===== DANH MUC MANAGEMENT (per-coso) =====
 const DEFAULT_THU = ['Tiền thuê','Phí dịch vụ','Tiền cọc','Lãi NH'];
-const DEFAULT_CHI = ['Chuyển CĐT','Dọn dẹp','Hoa hồng','Điện','Nước','Internet','Sửa chữa','Bể bơi','Thuế','Rác','Khác'];
+const DEFAULT_CHI = ['Chuyển CĐT','Dự phòng','Dọn dẹp','Hoa hồng','Điện','Nước','Internet','Sửa chữa','Bể bơi','Thuế','Rác','Khác'];
 let customThu = [], customChi = [];
 
 function getAllCats() { return [...customThu, ...customChi]; }
@@ -2206,7 +2206,7 @@ function renderKQKD() {
   const CHI_FIXED = ['Dọn dẹp','Hoa hồng','Đồ dùng','Điện thoại','Điện','Nước','Internet','Sửa chữa','Bể bơi','Thuế','Rác','Khác'];
   const thuCatsNorm = getAllThuCats().map(t=>norm(t));
   const chiExtra = [...new Set(
-    cache.bank.filter(b=>(b.chi||0)>0&&b.chiTiet&&norm(b.chiTiet)!=='Chuyển CĐT')
+    cache.bank.filter(b=>(b.chi||0)>0&&b.chiTiet&&norm(b.chiTiet)!=='Chuyển CĐT'&&norm(b.chiTiet)!=='Dự phòng')
     .map(b=>norm(b.chiTiet))
   )].filter(c=>!CHI_FIXED.includes(c) && !thuCatsNorm.includes(c));
   const CHI_ROWS = [...CHI_FIXED, ...chiExtra];
@@ -2232,9 +2232,10 @@ function renderKQKD() {
     const thuRefunds = bk.reduce((s,b)=>s+(thuCatsNorm.includes(norm(b.chiTiet))&&(b.chi||0)>0?b.chi:0),0);
     const totalThuNet = totalThu - thuRefunds;
     const cdt = bk.reduce((s,b)=>s+(norm(b.chiTiet)==='Chuyển CĐT'?(b.chi||0):0),0);
+    const duPhong = bk.reduce((s,b)=>s+(norm(b.chiTiet)==='Dự phòng'?(b.chi||0):0),0);
     const soDuDau = soDuBefore(`${yr}-${mn2}-01`);
-    const soDuCuoi = soDuDau + totalThu - totalChi - thuRefunds - cdt;
-    return {m, thangKey, tienThue, phiDV, laiNH, tienCoc, thuKhac, totalThu, totalThuNet, thuRefunds, doanhThu, chi, totalChi, cdt, soDuDau, soDuCuoi, loiNhuan: doanhThu-totalChi};
+    const soDuCuoi = soDuDau + totalThu - totalChi - thuRefunds - cdt - duPhong;
+    return {m, thangKey, tienThue, phiDV, laiNH, tienCoc, thuKhac, totalThu, totalThuNet, thuRefunds, doanhThu, chi, totalChi, cdt, duPhong, soDuDau, soDuCuoi, loiNhuan: doanhThu-totalChi};
   });
 
   const sum = fn => mData.reduce((s,d)=>s+fn(d),0);
@@ -2289,6 +2290,10 @@ function renderKQKD() {
   const cdtVals = mData.map(d=>d.cdt||0);
   if (cdtVals.some(v=>v>0)) {
     t += `<tr>${lbl('Chuyển tiền cho CĐT')}${cdtVals.map(v=>td(fmtNet(v))).join('')}${td(fmtNet(cdtVals.reduce((s,v)=>s+v,0)),'font-weight:600')}</tr>`;
+  }
+  const duPhongVals = mData.map(d=>d.duPhong||0);
+  if (duPhongVals.some(v=>v>0)) {
+    t += `<tr>${lbl('Dự phòng')}${duPhongVals.map(v=>td(fmtNet(v))).join('')}${td(fmtNet(duPhongVals.reduce((s,v)=>s+v,0)),'font-weight:600')}</tr>`;
   }
 
   t += `<tr style="background:#14532d"><td style="padding:6px 12px;font-weight:700;color:#fff;position:sticky;left:0;background:#14532d;z-index:1;white-space:nowrap">Số dư cuối kỳ</td>${mData.map(d=>`<td style="text-align:right;padding:6px 7px;font-weight:700;color:#fff;font-size:12px">${fmt(d.soDuCuoi)}</td>`).join('')}<td style="text-align:right;padding:6px 7px;color:#6ee7b7;font-size:11px">—</td></tr>`;
