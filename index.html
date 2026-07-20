@@ -1272,9 +1272,13 @@ function renderBankYear(yr) {
   const soDuMap = {};
   allSorted.forEach(b => { running += (b.thu||0)-(b.chi||0); soDuMap[b.id] = running; });
 
-  const filterCat = document.getElementById('bank-filter-cat')?.value || '';
-  const yearBkAll = allSorted.filter(b=>(b.thang||'').startsWith(yr+'-'));
-  const yearBk = filterCat ? yearBkAll.filter(b=>(b.chiTiet||'').trim()===filterCat) : yearBkAll;
+  const filterCat = (document.getElementById('bank-filter-cat')?.value || '').trim().normalize('NFC');
+  // Match both '2026-04' and '2026-4' formats, and year '2026'
+  const yearBkAll = allSorted.filter(b => {
+    const t = b.thang || b.ngay?.slice(0,7) || '';
+    return t.startsWith(yr+'-') || t === yr;
+  });
+  const yearBk = filterCat ? yearBkAll.filter(b=>(b.chiTiet||'').trim().normalize('NFC')===filterCat) : yearBkAll;
   const yearThu = yearBk.reduce((s,b)=>s+(b.thu||0),0);
   const yearChi = yearBk.reduce((s,b)=>s+(b.chi||0),0);
 
