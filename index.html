@@ -1184,10 +1184,12 @@ function renderBankMonthTabs() {
   if (!tabsEl || !yearEl) return;
   yearEl.textContent = bankYear;
   const months = ['T1','T2','T3','T4','T5','T6','T7','T8','T9','T10','T11','T12'];
+  const yearKey = String(bankYear);
   tabsEl.innerHTML = months.map((m,i) => {
     const val = `${bankYear}-${String(i+1).padStart(2,'0')}`;
     return `<button class="bank-mtab${val===bankSelectedMonth?' active':''}" onclick="switchBankMonth('${val}')">${m}</button>`;
-  }).join('');
+  }).join('') +
+  `<button class="bank-mtab${bankSelectedMonth===yearKey?' active':''}" onclick="switchBankMonth('${yearKey}')" style="margin-left:6px;${bankSelectedMonth===yearKey?'':'background:#eff6ff;color:#1d4ed8'}">Cả năm</button>`;
 }
 
 function clearBankFilter() {
@@ -1198,17 +1200,20 @@ function clearBankFilter() {
 function switchBankMonth(month) {
   if (bankEditBuffer.length && !confirm('Bạn có thay đổi chưa lưu. Tiếp tục?')) return;
   bankSelectedMonth = month;
-  bankYear = parseInt(month.split('-')[0]);
+  bankYear = parseInt(month.includes('-') ? month.split('-')[0] : month);
   bankEditBuffer = [];
   const s = document.getElementById('btn-bank-save'); if(s) s.style.display='none';
+  // Restore add button when returning to month view
+  const addBtn = document.getElementById('btn-add-bank');
+  if (addBtn) addBtn.style.display = month.includes('-') ? '' : 'none';
   renderBankMonthTabs(); renderBank();
 }
 
 function changeBankYear(delta) {
   if (bankEditBuffer.length && !confirm('Bạn có thay đổi chưa lưu. Tiếp tục?')) return;
   bankYear += delta;
-  const mn = bankSelectedMonth.split('-')[1];
-  bankSelectedMonth = `${bankYear}-${mn}`;
+  const isYearView = !bankSelectedMonth.includes('-');
+  bankSelectedMonth = isYearView ? String(bankYear) : `${bankYear}-${bankSelectedMonth.split('-')[1]}`;
   bankEditBuffer = [];
   const s = document.getElementById('btn-bank-save'); if(s) s.style.display='none';
   renderBankMonthTabs(); renderBank();
@@ -1255,9 +1260,103 @@ function updateBankRow(tempId, field, value) {
   row[field] = (field==='thu'||field==='chi') ? (Number(value)||0) : value;
 }
 
+// ===== BANK YEAR VIEW =====
+function renderBankYear(yr) {
+  renderBankMonthTabs();
+
+  const coso = allCosos.find(c=>c.id===selectedCosoId);
+  const initSoDu = coso?.soDuInitial || 0;
+  const allSorted = [...cache.bank].sort((a,b)=>(a.ngay||'').localeCompare(b.ngay||'')||(a.id||'').localeCompare(b.id||''));
+
+  let running = initSoDu;
+  const soDuMap = {};
+  allSorted.forEach(b => { running += (b.thu||0)-(b.chi||0); soDuMap[b.id] = running; });
+
+  const yearBk = allSorted.filter(b=>(b.thang||'').startsWith(yr+'-'));
+  const yearThu = yearBk.reduce((s,b)=>s+(b.thu||0),0);
+  const yearChi = yearBk.reduce((s,b)=>s+(b.chi||0),0);
+
+  // Opening balance = before Jan 1
+  const beforeYear = allSorted.filter(b=>b.thang<yr+'-01');
+  const soDuDauNam = beforeYear.length ? soDuMap[beforeYear[beforeYear.length-1].id] : initSoDu;
+  const lastYearTx = yearBk[yearBk.length-1];
+  const soDuCuoiNam = lastYearTx ? soDuMap[lastYearTx.id] : soDuDauNam;
+
+  document.getElementById('bk-sodu').textContent = fmt(soDuCuoiNam);
+  document.getElementById('bk-sodu-sub').textContent = `Cuối năm ${yr}`;
+  document.getElementById('bk-thu').textContent = fmt(yearThu);
+  document.getElementById('bk-thu-sub').textContent = `Cả năm ${yr}`;
+  document.getElementById('bk-chi').textContent = fmt(yearChi);
+  document.getElementById('bk-chi-sub').textContent = `Cả năm ${yr}`;
+  document.getElementById('bk-count').textContent = yearBk.length;
+  document.getElementById('bk-count-sub').textContent = 'giao dịch cả năm';
+  document.getElementById('bank-header').textContent = `Bank – Năm ${yr}`;
+
+  // Hide add/save buttons
+  const addBtn = document.getElementById('btn-add-bank');
+  const saveBtn = document.getElementById('btn-bank-save');
+  if (addBtn) addBtn.style.display = 'none';
+  if (saveBtn) saveBtn.style.display = 'none';
+  if (document.getElementById('bank-filter-summary')) document.getElementById('bank-filter-summary').style.display='none';
+
+  // Build monthly summary table
+  const thStyle = 'text-align:right;padding:6px 10px;font-size:12px;white-space:nowrap';
+  const td = (v,s='') => `<td style="text-align:right;padding:5px 10px;font-size:12px;border-bottom:1px solid #f3f4f6;${s}">${v}</td>`;
+  const months = Array.from({length:12},(_,i)=>i+1);
+
+  let soDuPrev = soDuDauNam;
+  let html = '';
+  months.forEach(m => {
+    const mn2 = String(m).padStart(2,'0');
+    const key = `${yr}-${mn2}`;
+    const mBk = yearBk.filter(b=>b.thang===key);
+    const mThu = mBk.reduce((s,b)=>s+(b.thu||0),0);
+    const mChi = mBk.reduce((s,b)=>s+(b.chi||0),0);
+    const lastTx = mBk[mBk.length-1];
+    const soDuCuoi = lastTx ? soDuMap[lastTx.id] : soDuPrev;
+    const net = mThu - mChi;
+    if (mBk.length > 0) soDuPrev = soDuCuoi;
+    const hasData = mBk.length > 0;
+    html += `<tr style="${hasData?'':'opacity:0.4'}" onclick="switchBankMonth('${key}')" style="cursor:pointer">
+      <td style="padding:5px 12px;font-weight:600;font-size:12px;border-bottom:1px solid #f3f4f6;cursor:pointer;color:#1d4ed8" onclick="switchBankMonth('${key}')">T${m}/${yr}</td>
+      ${td(hasData?fmt(soDuPrev):'')}
+      ${td(hasData?fmt(mThu):'','color:#15803d')}
+      ${td(hasData?fmt(mChi):'','color:#dc2626')}
+      ${td(hasData?(net>=0?`<span style="color:#15803d">+${fmt(net)}</span>`:`<span style="color:#dc2626">${fmt(net)}</span>`):'', '')}
+      ${td(hasData?fmt(soDuCuoi):'','font-weight:700;color:#111827')}
+      ${td(hasData?mBk.length+'':'')}
+    </tr>`;
+    if (hasData) soDuPrev = soDuCuoi;
+  });
+
+  // Footer totals
+  html += `<tr style="background:#f0fdf4;font-weight:700">
+    <td style="padding:6px 12px;font-size:12px;border-top:2px solid #e5e7eb">Tổng năm ${yr}</td>
+    <td style="border-top:2px solid #e5e7eb"></td>
+    ${td(fmt(yearThu),'border-top:2px solid #e5e7eb;color:#15803d;font-weight:800')}
+    ${td(fmt(yearChi),'border-top:2px solid #e5e7eb;color:#dc2626;font-weight:800')}
+    ${td((yearThu-yearChi)>=0?`<span style="color:#15803d">+${fmt(yearThu-yearChi)}</span>`:`<span style="color:#dc2626">${fmt(yearThu-yearChi)}</span>`,'border-top:2px solid #e5e7eb')}
+    ${td(fmt(soDuCuoiNam),'border-top:2px solid #e5e7eb;font-weight:800;color:#111827')}
+    ${td(yearBk.length+'',' border-top:2px solid #e5e7eb')}
+  </tr>`;
+
+  document.getElementById('bank-table').innerHTML = `
+    <tr style="background:#14532d;color:#fff">
+      <th style="padding:7px 12px;font-size:12px;text-align:left">Tháng</th>
+      <th style="${thStyle}">Số dư đầu</th>
+      <th style="${thStyle}">Thu</th>
+      <th style="${thStyle}">Chi</th>
+      <th style="${thStyle}">Chênh lệch</th>
+      <th style="${thStyle}">Số dư cuối</th>
+      <th style="${thStyle}">SL GD</th>
+    </tr>${html}`;
+}
+
 // ===== BANK =====
 function renderBank() {
   const thang = getBankMonth();
+  const isYearView = !thang.includes('-');
+  if (isYearView) { renderBankYear(thang); return; }
   const filterCat = document.getElementById('bank-filter-cat')?.value || '';
 
   renderBankMonthTabs();
