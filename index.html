@@ -1272,7 +1272,9 @@ function renderBankYear(yr) {
   const soDuMap = {};
   allSorted.forEach(b => { running += (b.thu||0)-(b.chi||0); soDuMap[b.id] = running; });
 
-  const yearBk = allSorted.filter(b=>(b.thang||'').startsWith(yr+'-'));
+  const filterCat = document.getElementById('bank-filter-cat')?.value || '';
+  const yearBkAll = allSorted.filter(b=>(b.thang||'').startsWith(yr+'-'));
+  const yearBk = filterCat ? yearBkAll.filter(b=>(b.chiTiet||'').trim()===filterCat) : yearBkAll;
   const yearThu = yearBk.reduce((s,b)=>s+(b.thu||0),0);
   const yearChi = yearBk.reduce((s,b)=>s+(b.chi||0),0);
 
@@ -1358,6 +1360,9 @@ function renderBankYear(yr) {
   }
 
   document.getElementById('bank-table').innerHTML = html;
+  rebuildFilterDropdown();
+  const clearBtn = document.getElementById('btn-clear-filter');
+  if (clearBtn) clearBtn.style.display = filterCat ? '' : 'none';
 }
 
 // ===== BANK =====
@@ -1562,11 +1567,13 @@ function rebuildFilterDropdown() {
   if (!sel) return;
   const cur = sel.value;
   sel.innerHTML = '<option value="">Lọc chi tiết</option>';
-  // Merge configured cats + any actual chiTiet values in current month's bank data
+  // Merge configured cats + any actual chiTiet values in current month/year bank data
   const thang = getBankMonth();
+  const isYearV = !thang.includes('-');
   const configuredCats = getAllCatsForSelect();
   const dataCats = [...new Set(
-    cache.bank.filter(b=>b.thang===thang&&b.chiTiet).map(b=>(b.chiTiet||'').trim())
+    cache.bank.filter(b=>isYearV ? (b.thang||'').startsWith(thang+'-') : b.thang===thang)
+      .filter(b=>b.chiTiet).map(b=>(b.chiTiet||'').trim())
   )];
   const allCats = [...new Set([...configuredCats.map(c=>c.trim()), ...dataCats])];
   allCats.forEach(c => {
