@@ -1940,8 +1940,28 @@ function renderThu() {
       </td>
     </tr>`;
   }).join('');
-  document.getElementById('thu-table').innerHTML = rows ||
-    `<tr><td colspan="18" style="text-align:center;padding:24px;color:#9ca3af">Chưa có khoản thu${thang.endsWith('-00')?` năm ${thang.slice(0,4)}`:`  tháng ${thang}`}</td></tr>`;
+  const tbS = 'text-align:right;padding:6px 8px;font-weight:700;font-size:12px;border-top:2px solid #14532d;background:#f0fdf4';
+  const footRow = thuM.length ? `<tr>
+    <td colspan="2" style="position:sticky;left:0;background:#f0fdf4;z-index:5;padding:6px 12px;font-weight:700;font-size:12px;border-top:2px solid #14532d;border-right:2px solid #e5e7eb">Tổng cộng (${thuM.length} dòng)</td>
+    <td style="${tbS}"></td>
+    <td style="${tbS}"></td>
+    <td style="${tbS}"></td>
+    <td style="${tbS};color:${sumF('tienCoc')<0?'#dc2626':'inherit'}">${sumF('tienCoc')?fmt(sumF('tienCoc')):''}</td>
+    <td style="${tbS}">${sumF('tienThue')||thuM.reduce((s,t)=>s+(t.sotien||0),0)?fmt(sumF('tienThue')||thuM.reduce((s,t)=>s+(t.sotien||0),0)):''}</td>
+    <td style="${tbS}"></td>
+    <td style="${tbS}"></td>
+    <td style="${tbS}">${thuM.reduce((s,t)=>s+thuSd(t),0)||''}</td>
+    <td style="${tbS}"></td>
+    <td style="${tbS}">${sumF('tienDien')?fmt(sumF('tienDien')):''}</td>
+    <td style="${tbS}"></td>
+    <td style="${tbS}"></td>
+    <td style="${tbS}">${sumF('tienNuoc')?fmt(sumF('tienNuoc')):''}</td>
+    <td style="${tbS}">${sumF('phiKhac')?fmt(sumF('phiKhac')):''}</td>
+    <td style="${tbS};color:#059669">${fmt(total)}</td>
+    <td style="${tbS}">${sumF('hoaHong')?fmt(sumF('hoaHong')):''}</td>
+    <td style="${tbS}"></td>
+  </tr>` : '';
+  document.getElementById('thu-table').innerHTML = (rows || `<tr><td colspan="18" style="text-align:center;padding:24px;color:#9ca3af">Chưa có khoản thu${thang.endsWith('-00')?` năm ${thang.slice(0,4)}`:`  tháng ${thang}`}</td></tr>`) + footRow;
 }
 
 async function deleteThu(id) {
