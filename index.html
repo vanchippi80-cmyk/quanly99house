@@ -1465,7 +1465,7 @@ function renderBank() {
       <td class="bank-thu cell-edit" data-id="${b.id}" data-field="thu" data-type="number"><span>${b.thu?fmt(b.thu):''}</span></td>
       <td class="bank-chi cell-edit" data-id="${b.id}" data-field="chi" data-type="number"><span>${b.chi?fmt(b.chi):''}</span></td>
       <td style="font-size:12px;color:#111827;font-weight:600;text-align:right">${fmt(soDuMap[b.id]??0)}</td>
-      <td>${canEdit?`<button class="btn btn-danger btn-sm" onclick="deleteBankEntry('${b.id}')">✕</button>`:''}</td>
+      <td style="white-space:nowrap">${canEdit?`<button class="btn btn-secondary btn-sm" onclick="editBankRow('${b.id}')" title="Sửa">✏️</button> <button class="btn btn-danger btn-sm" onclick="deleteBankEntry('${b.id}')">✕</button>`:''}</td>
     </tr>`;
   });
 
@@ -1536,6 +1536,42 @@ async function deleteBankEntry(id) {
   if (!confirm('Xoá giao dịch này?')) return;
   await db.collection('bank').doc(id).delete();
   toast('Đã xoá','success');
+}
+
+function editBankRow(id) {
+  const b = cache.bank.find(x=>x.id===id);
+  if (!b) return;
+  const iStyle = 'width:100%;padding:3px 5px;border:1px solid #d1d5db;border-radius:4px;font-size:11px';
+  const catOpts = getAllCatsForSelect().map(c=>`<option value="${c}"${c===b.chiTiet?' selected':''}>${c}</option>`).join('');
+  const row = document.querySelector(`[data-id="${id}"]`)?.closest('tr') ||
+    [...document.querySelectorAll('#bank-table tr')].find(tr=>tr.innerHTML.includes(`'${id}'`));
+  if (!row) return;
+  row.style.background = '#fefce8';
+  row.innerHTML = `
+    <td style="color:#6b7280;font-size:11px;text-align:center">✏️</td>
+    <td style="padding:3px 5px"><input id="bke-ngay-${id}" type="date" value="${b.ngay||''}" style="${iStyle}"></td>
+    <td style="padding:3px 5px"><input id="bke-nd-${id}" type="text" value="${(b.noiDung||'')}" placeholder="Nội dung" style="${iStyle}"></td>
+    <td style="padding:3px 5px"><select id="bke-cat-${id}" style="${iStyle}">${catOpts}</select></td>
+    <td style="padding:3px 5px"><input id="bke-thu-${id}" type="number" value="${b.thu||0}" min="0" style="${iStyle};text-align:right"></td>
+    <td style="padding:3px 5px"><input id="bke-chi-${id}" type="number" value="${b.chi||0}" min="0" style="${iStyle};text-align:right"></td>
+    <td></td>
+    <td style="white-space:nowrap">
+      <button class="btn btn-success btn-sm" onclick="saveBankRowInline('${id}')">✓</button>
+      <button class="btn btn-secondary btn-sm" onclick="renderBank()">✗</button>
+    </td>`;
+}
+
+async function saveBankRowInline(id) {
+  const b = cache.bank.find(x=>x.id===id);
+  if (!b) return;
+  const ngay = document.getElementById(`bke-ngay-${id}`)?.value || b.ngay;
+  const noiDung = document.getElementById(`bke-nd-${id}`)?.value || '';
+  const chiTiet = document.getElementById(`bke-cat-${id}`)?.value || '';
+  const thu = parseFloat(document.getElementById(`bke-thu-${id}`)?.value)||0;
+  const chi = parseFloat(document.getElementById(`bke-chi-${id}`)?.value)||0;
+  const thang = ngay ? ngay.slice(0,7) : b.thang;
+  await bankSaveFull(id, {ngay, noiDung, chiTiet, thu, chi, thang});
+  toast('Đã lưu','success');
 }
 
 // ===== DANH MUC MANAGEMENT (per-coso) =====
