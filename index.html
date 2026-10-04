@@ -2370,7 +2370,7 @@ function renderKQKD() {
     const thuRefunds = bk.reduce((s,b)=>s+(thuCatsNorm.includes(norm(b.chiTiet))&&(b.chi||0)>0?b.chi:0),0);
     const totalThuNet = totalThu - thuRefunds;
     const cdt = bk.reduce((s,b)=>s+(norm(b.chiTiet)==='Chuyển CĐT'?(b.chi||0):0),0);
-    const duPhong = bk.reduce((s,b)=>s+(norm(b.chiTiet)==='Dự phòng'?(b.chi||0):0),0);
+    const duPhong = bk.reduce((s,b)=>s+(norm(b.chiTiet)==='Dự phòng'?((b.chi||0)-(b.thu||0)):0),0);
     const soDuDau = soDuBefore(`${yr}-${mn2}-01`);
     const soDuCuoi = soDuDau + totalThu - totalChi - thuRefunds - cdt - duPhong;
     return {m, thangKey, tienThue, phiDV, laiNH, tienCoc, thuKhac, totalThu, totalThuNet, thuRefunds, doanhThu, chi, totalChi, cdt, duPhong, soDuDau, soDuCuoi, loiNhuan: doanhThu-totalChi};
