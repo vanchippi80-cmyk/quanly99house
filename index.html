@@ -1571,16 +1571,11 @@ async function saveBankRowInline(id) {
   const chi = parseFloat(document.getElementById('bke-chi-'+id)?.value)||0;
   const thang = ngay ? ngay.slice(0,7) : b.thang;
   try {
+    const {id: _rmId, ...oldData} = {...b};
     Object.assign(b, {ngay, noiDung, chiTiet, thu, chi, thang});
-    await db.collection('bank').doc(id).set({
-      cosoId: b.cosoId || selectedCosoId,
-      ngay, noiDung, chiTiet, thu, chi, thang,
-      soDu: b.soDu||0, phong: b.phong||'',
-      importedFrom: b.importedFrom||'manual',
-      createdBy: b.createdBy||currentUser.uid,
-    });
+    await db.collection('bank').doc(id).delete();
+    await db.collection('bank').add({...oldData, ngay, noiDung, chiTiet, thu, chi, thang, createdBy: currentUser.uid});
     toast('Đã lưu','success');
-    renderBank();
   } catch(e) {
     toast('Lỗi: '+e.message,'error');
   }
@@ -1692,21 +1687,11 @@ async function saveDanhmuc() {
 async function bankSaveFull(id, patch) {
   const b = cache.bank.find(x => x.id === id);
   if (!b) return;
+  const {id: _rmId2, ...oldData2} = {...b};
   Object.assign(b, patch);
   renderBank();
-  await db.collection('bank').doc(id).set({
-    cosoId:       b.cosoId || selectedCosoId,
-    ngay:         b.ngay || '',
-    thang:        b.thang || '',
-    noiDung:      b.noiDung || '',
-    chiTiet:      b.chiTiet || '',
-    thu:          b.thu || 0,
-    chi:          b.chi || 0,
-    soDu:         b.soDu || 0,
-    phong:        b.phong || '',
-    importedFrom: b.importedFrom || 'manual',
-    createdBy:    b.createdBy || currentUser.uid,
-  });
+  await db.collection('bank').doc(id).delete();
+  await db.collection('bank').add({...oldData2, ...patch, createdBy: currentUser.uid});
 }
 
 function bankCellInput(td, id, field, type, currentVal) {
