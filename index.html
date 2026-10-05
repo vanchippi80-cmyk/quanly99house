@@ -1573,8 +1573,8 @@ async function saveBankRowInline(id) {
   try {
     const {id: _rmId, ...oldData} = {...b};
     Object.assign(b, {ngay, noiDung, chiTiet, thu, chi, thang});
-    await db.collection('bank').doc(id).delete();
-    await db.collection('bank').add({...oldData, ngay, noiDung, chiTiet, thu, chi, thang, createdBy: currentUser.uid});
+    try { await db.collection('bank').doc(id).delete(); } catch(e2) { toast('Lỗi xóa: '+e2.message,'error'); return; }
+    try { await db.collection('bank').add({...oldData, ngay, noiDung, chiTiet, thu, chi, thang, createdBy: currentUser.uid}); } catch(e3) { toast('Lỗi thêm: '+e3.message,'error'); return; }
     toast('Đã lưu','success');
   } catch(e) {
     toast('Lỗi: '+e.message,'error');
