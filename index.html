@@ -2395,7 +2395,7 @@ function renderKQKD() {
     const tienCocC = bk.reduce((s,b)=>s+(norm(b.chiTiet)==='Tiền cọc'&&(b.chi||0)>0?b.chi:0),0);
     const tienCoc  = tienCocT - tienCocC;
     const thuKhac  = bkCat('Khác Thu') + bkCat('Thu khác');
-    const totalThu = bk.reduce((s,b)=>s+((b.thu||0)>0?b.thu:0),0);
+    const totalThu = bk.reduce((s,b)=>s+(((b.thu||0)>0&&norm(b.chiTiet)!=='Dự phòng')?b.thu:0),0);
     const doanhThu = tienThue + phiDV + laiNH;
     const chi = {};
     CHI_ROWS.forEach(k=>{ chi[k] = bk.reduce((s,b)=>s+(norm(b.chiTiet)===k?(b.chi||0):0),0); });
